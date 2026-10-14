@@ -68,6 +68,9 @@ create table public.semanas (
   fecha_inicio  date not null check (extract(isodow from fecha_inicio) = 1), -- siempre lunes
   estado        text not null default 'borrador' check (estado in ('borrador', 'publicado', 'cambios')),
   publicado_at  timestamptz,
+  -- Copia del cuadrante en el momento de publicar: es lo que ven los empleados.
+  -- Formato: { "<empleado_id>": { "0": "M", "3": "N" } }  (días sin clave = libre)
+  publicado     jsonb,
   created_at    timestamptz not null default now(),
   unique (local_id, fecha_inicio)
 );
@@ -180,3 +183,98 @@ $$;
 create trigger locales_franjas_por_defecto
   after insert on public.locales
   for each row execute function public.crear_franjas_por_defecto();
+
+-- ============================================================
+-- Operaciones atómicas (todo o nada).
+-- Son SECURITY INVOKER: se ejecutan con los permisos del encargado,
+-- así que las políticas RLS de arriba siguen protegiendo los datos.
+-- ============================================================
+
+-- Sustituye todos los turnos de una semana por los recibidos.
+-- p_turnos: [{"empleado_id": "...", "dia": 0, "franja": "M"}, ...]
+create function public.guardar_cuadrante(p_semana uuid, p_turnos jsonb)
+returns void
+language plpgsql security invoker set search_path = ''
+as $$
+begin
+  perform 1 from public.semanas where id = p_semana;
+  if not found then raise exception 'Semana no encontrada'; end if;
+
+  delete from public.turnos where semana_id = p_semana;
+
+  insert into public.turnos (semana_id, empleado_id, dia, franja)
+  select p_semana, (t ->> 'empleado_id')::uuid, (t ->> 'dia')::smallint, t ->> 'franja'
+  from jsonb_array_elements(coalesce(p_turnos, '[]'::jsonb)) as t;
+
+  update public.semanas set estado = 'cambios' where id = p_semana and estado = 'publicado';
+end;
+$$;
+
+-- Marca la semana como publicada y guarda la copia que verán los empleados.
+create function public.publicar_semana(p_semana uuid)
+returns void
+language plpgsql security invoker set search_path = ''
+as $$
+begin
+  update public.semanas s
+  set estado = 'publicado',
+      publicado_at = now(),
+      publicado = coalesce((
+        select jsonb_object_agg(x.empleado_id, x.dias)
+        from (
+          select t.empleado_id, jsonb_object_agg(t.dia::text, t.franja) as dias
+          from public.turnos t
+          where t.semana_id = p_semana
+          group by t.empleado_id
+        ) x
+      ), '{}'::jsonb)
+  where s.id = p_semana;
+  if not found then raise exception 'Semana no encontrada'; end if;
+end;
+$$;
+
+-- Acepta una solicitud y aplica el cambio al cuadrante.
+create function public.aceptar_solicitud(p_id uuid)
+returns void
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  s public.solicitudes;
+  franja_a char(1);
+  franja_b char(1);
+begin
+  select * into s from public.solicitudes where id = p_id and estado = 'pendiente' for update;
+  if not found then raise exception 'Solicitud no encontrada o ya resuelta'; end if;
+
+  if s.tipo = 'librar' then
+    delete from public.turnos
+    where semana_id = s.semana_id and empleado_id = s.empleado_id and dia = s.dia;
+  else
+    -- Intercambio: los dos empleados se cambian lo que tenían ese día.
+    select franja into franja_a from public.turnos
+      where semana_id = s.semana_id and empleado_id = s.empleado_id and dia = s.dia;
+    select franja into franja_b from public.turnos
+      where semana_id = s.semana_id and empleado_id = s.con_empleado_id and dia = s.dia;
+    delete from public.turnos
+      where semana_id = s.semana_id and dia = s.dia and empleado_id in (s.empleado_id, s.con_empleado_id);
+    if franja_b is not null then
+      insert into public.turnos values (s.semana_id, s.empleado_id, s.dia, franja_b);
+    end if;
+    if franja_a is not null then
+      insert into public.turnos values (s.semana_id, s.con_empleado_id, s.dia, franja_a);
+    end if;
+  end if;
+
+  update public.solicitudes set estado = 'aceptada' where id = p_id;
+  update public.semanas set estado = 'cambios' where id = s.semana_id and estado = 'publicado';
+end;
+$$;
+
+revoke execute on function public.guardar_cuadrante(uuid, jsonb) from public, anon;
+revoke execute on function public.publicar_semana(uuid) from public, anon;
+revoke execute on function public.aceptar_solicitud(uuid) from public, anon;
+revoke execute on function public.es_mi_local(uuid) from public, anon;
+grant execute on function public.guardar_cuadrante(uuid, jsonb) to authenticated;
+grant execute on function public.publicar_semana(uuid) to authenticated;
+grant execute on function public.aceptar_solicitud(uuid) to authenticated;
+grant execute on function public.es_mi_local(uuid) to authenticated;
