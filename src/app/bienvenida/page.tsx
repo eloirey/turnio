@@ -6,7 +6,7 @@ import { getMyLocal, requireUser } from "@/lib/data/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { OnboardingForm } from "./OnboardingForm";
 
-export const metadata = { title: "Bienvenida · Turnio" };
+export const metadata = { title: "Bienvenida · Rotafy" };
 
 async function Gate() {
   await requireUser();
@@ -19,7 +19,7 @@ export default function BienvenidaPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-12">
       <div className="max-w-lg text-center">
-        <div className="mb-4 font-display text-2xl font-bold text-accent">turnio</div>
+        <div className="mb-4 font-display text-2xl font-bold text-accent">rotafy</div>
         <h1 className={ui.h1}>Vamos a preparar tu local</h1>
         <p className="mt-2 text-ink-soft">Dos datos y empiezas. Tarda menos de un minuto.</p>
       </div>

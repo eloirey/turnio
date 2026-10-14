@@ -22,7 +22,7 @@ export function AppHeader({ localName, nav, signOut }: Props) {
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-4 py-3.5 sm:px-8">
       <div className="flex flex-wrap items-center gap-6">
         <Link href="/" className="font-display text-2xl font-bold tracking-tight text-accent">
-          turnio
+          rotafy
         </Link>
         <nav aria-label="Principal" className="flex flex-wrap gap-1 text-sm">
           {nav.map((item) => {

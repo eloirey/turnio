@@ -17,7 +17,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import { getBaseUrl } from "@/lib/url";
 import { acceptRequest, publishWeek, rejectRequest, saveWeek } from "./actions";
 
-export const metadata = { title: "Cuadrante · Turnio" };
+export const metadata = { title: "Cuadrante · Rotafy" };
 
 type Search = Promise<{ semana?: string }>;
 

@@ -4,7 +4,7 @@ import { getEmployees, requireLocal } from "@/lib/data/queries";
 import { getBaseUrl } from "@/lib/url";
 import { EmpleadosManager } from "./EmpleadosManager";
 
-export const metadata = { title: "Empleados · Turnio" };
+export const metadata = { title: "Empleados · Rotafy" };
 
 async function Content({ searchParams }: { searchParams: Promise<{ nuevo?: string }> }) {
   const [local, params] = await Promise.all([requireLocal(), searchParams]);

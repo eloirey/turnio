@@ -123,7 +123,7 @@ export function EmpleadosManager({ employees, baseUrl, localName, firstTime }: P
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className={ui.h1}>Empleados</h1>
-          <p className="mt-1.5 text-[15px] text-ink-soft">Con estos datos Turnio genera el cuadrante.</p>
+          <p className="mt-1.5 text-[15px] text-ink-soft">Con estos datos Rotafy genera el cuadrante.</p>
         </div>
         <button onClick={() => select(null)} className={`${ui.btn} ${ui.primary}`}>
           + Añadir empleado

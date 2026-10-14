@@ -10,7 +10,7 @@ const STEPS = [
   {
     n: "2",
     title: "Genera el cuadrante",
-    text: "Turnio reparte los turnos según lo que necesitas cada día y te avisa si falta alguien o alguien cierra demasiadas noches.",
+    text: "Rotafy reparte los turnos según lo que necesitas cada día y te avisa si falta alguien o alguien cierra demasiadas noches.",
   },
   {
     n: "3",
@@ -30,7 +30,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-ground">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <span className="font-display text-2xl font-bold tracking-tight text-accent">turnio</span>
+        <span className="font-display text-2xl font-bold tracking-tight text-accent">rotafy</span>
         <nav className="flex items-center gap-2 text-sm">
           <Link href="/demo" className="min-h-11 rounded-lg px-3 py-3 font-semibold text-ink-soft hover:bg-surface">
             Demo
@@ -48,7 +48,7 @@ export default function Home() {
             El cuadrante de la semana, hecho en un minuto.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-            Turnio genera los turnos de tu equipo respetando disponibilidad y horas de contrato, te avisa de los conflictos y
+            Rotafy genera los turnos de tu equipo respetando disponibilidad y horas de contrato, te avisa de los conflictos y
             manda a cada uno su horario. Sin Excel y sin fotos perdidas en el grupo.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -100,7 +100,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-line px-6 py-8 text-center text-sm text-ink-muted">Turnio · Cuadrantes de turnos para hostelería</footer>
+      <footer className="border-t border-line px-6 py-8 text-center text-sm text-ink-muted">Rotafy · Cuadrantes de turnos para tu equipo</footer>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import "@fontsource-variable/bricolage-grotesque";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Turnio — Cuadrantes de turnos sin Excel",
+  title: "Rotafy — Cuadrantes de turnos sin Excel",
   description: "Genera el cuadrante semanal de tu equipo en segundos y avisa a todos con un enlace.",
 };
 

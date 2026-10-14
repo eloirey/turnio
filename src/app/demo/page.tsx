@@ -3,7 +3,7 @@ import { Cuadrante } from "@/components/cuadrante/Cuadrante";
 import { DEFAULT_RULES, DEFAULT_SHIFTS } from "@/lib/schedule/defaults";
 import { DEMO_DEMAND, DEMO_EMPLOYEES, ROLE_LABELS } from "@/lib/schedule/demo-data";
 
-export const metadata = { title: "Demo · Turnio" };
+export const metadata = { title: "Demo · Rotafy" };
 
 const DEMO_MONDAY = "2026-10-12";
 

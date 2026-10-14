@@ -23,5 +23,5 @@ export function personalScheduleMessage(opts: {
 }
 
 export function groupScheduleMessage(localName: string, monday: string): string {
-  return `Ya está publicado el horario de ${localName} para la semana del ${weekRangeLabel(monday)}. Cada uno lo tiene en su enlace personal de Turnio.`;
+  return `Ya está publicado el horario de ${localName} para la semana del ${weekRangeLabel(monday)}. Cada uno lo tiene en su enlace personal de Rotafy.`;
 }
