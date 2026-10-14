@@ -1,10 +1,10 @@
 import "server-only";
 import { addDays, mondayOf, todayInMadrid } from "@/lib/dates";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { franjasToCatalog, snapshotToGrid, type FranjaRow, type Snapshot } from "./mappers";
+import { franjasToCatalog, snapshotToGrid, type AbsenceReason, type FranjaRow, type Snapshot } from "./mappers";
 
 /**
- * Datos para la vista pública del empleado (/h/<token>).
+ * Datos para la vista pública del empleado (/h/<token>) y su calendario.
  * Usa el cliente admin (sin RLS), así que AQUÍ es donde se controla el acceso:
  * solo se devuelve información del local del empleado dueño del token, y solo
  * semanas PUBLICADAS (nunca borradores).
@@ -16,59 +16,92 @@ export interface PublishedWeek {
   grid: ReturnType<typeof snapshotToGrid>;
 }
 
-export async function getEmployeeByToken(token: string) {
+interface Me {
+  id: string;
+  nombre: string;
+  puesto: string;
+  local_id: string;
+}
+
+export async function getEmployeeByToken(token: string): Promise<Me | null> {
   if (!/^[a-f0-9]{32}$/.test(token)) return null;
   const db = createAdminClient();
   const { data } = await db
     .from("empleados")
-    .select("id, nombre, puesto, local_id, activo")
+    .select("id, nombre, puesto, local_id")
     .eq("token_acceso", token)
     .eq("activo", true)
     .maybeSingle();
-  return data as { id: string; nombre: string; puesto: string; local_id: string } | null;
+  return data as Me | null;
 }
 
-export async function getEmployeeView(token: string) {
-  const me = await getEmployeeByToken(token);
-  if (!me) return null;
+async function loadPublished(me: Me, fromMonday: string, toMonday: string) {
   const db = createAdminClient();
-
-  const today = todayInMadrid();
-  const thisMonday = mondayOf(today);
-  const nextMonday = addDays(thisMonday, 7);
-
-  const [localRes, teamRes, weeksRes, shiftsRes, reqRes] = await Promise.all([
+  const [localRes, teamRes, weeksRes, shiftsRes, puestoRes, absRes] = await Promise.all([
     db.from("locales").select("nombre").eq("id", me.local_id).single(),
     db.from("empleados").select("id, nombre, puesto").eq("local_id", me.local_id).eq("activo", true).order("created_at"),
     db
       .from("semanas")
       .select("id, fecha_inicio, publicado")
       .eq("local_id", me.local_id)
-      .in("fecha_inicio", [thisMonday, nextMonday])
-      .not("publicado", "is", null),
+      .gte("fecha_inicio", fromMonday)
+      .lte("fecha_inicio", toMonday)
+      .not("publicado", "is", null)
+      .order("fecha_inicio"),
     db.from("franjas").select("franja, etiqueta, inicio, fin, horas").eq("local_id", me.local_id),
+    db.from("puestos").select("clave, nombre").eq("local_id", me.local_id),
+    db
+      .from("ausencias")
+      .select("desde, hasta, motivo")
+      .eq("empleado_id", me.id)
+      .lte("desde", addDays(toMonday, 6))
+      .gte("hasta", fromMonday),
+  ]);
+
+  const team = (teamRes.data ?? []) as { id: string; nombre: string; puesto: string }[];
+  const ids = team.map((t) => t.id);
+  const weeks: PublishedWeek[] = ((weeksRes.data ?? []) as { id: string; fecha_inicio: string; publicado: Snapshot }[]).map((w) => ({
+    id: w.id,
+    monday: w.fecha_inicio,
+    grid: snapshotToGrid(ids, w.publicado),
+  }));
+  const roleNames = Object.fromEntries(((puestoRes.data ?? []) as { clave: string; nombre: string }[]).map((p) => [p.clave, p.nombre]));
+  const absences = (absRes.data ?? []) as { desde: string; hasta: string; motivo: AbsenceReason }[];
+
+  return {
+    localName: (localRes.data?.nombre as string) ?? "",
+    team,
+    weeks,
+    shifts: franjasToCatalog((shiftsRes.data ?? []) as FranjaRow[]),
+    roleNames,
+    /** Motivo de ausencia de un día concreto (o null). */
+    absenceOn: (iso: string) => absences.find((a) => iso >= a.desde && iso <= a.hasta)?.motivo ?? null,
+  };
+}
+
+/** Esta semana y la siguiente, para la página del empleado. */
+export async function getEmployeeView(token: string) {
+  const me = await getEmployeeByToken(token);
+  if (!me) return null;
+  const db = createAdminClient();
+  const today = todayInMadrid();
+  const thisMonday = mondayOf(today);
+
+  const [data, reqRes] = await Promise.all([
+    loadPublished(me, thisMonday, addDays(thisMonday, 7)),
     db
       .from("solicitudes")
-      .select("id, tipo, dia, estado, created_at, semana_id, con_empleado_id")
+      .select("id, tipo, dia, estado, semana_id, con_empleado_id")
       .eq("empleado_id", me.id)
       .order("created_at", { ascending: false })
       .limit(5),
   ]);
 
-  const team = (teamRes.data ?? []) as { id: string; nombre: string; puesto: string }[];
-  const ids = team.map((t) => t.id);
-  const weeks: PublishedWeek[] = ((weeksRes.data ?? []) as { id: string; fecha_inicio: string; publicado: Snapshot }[])
-    .map((w) => ({ id: w.id, monday: w.fecha_inicio, grid: snapshotToGrid(ids, w.publicado) }))
-    .sort((a, b) => a.monday.localeCompare(b.monday));
-
   return {
     me,
     token,
-    localName: (localRes.data?.nombre as string) ?? "",
-    team,
-    weeks,
     today,
-    shifts: franjasToCatalog((shiftsRes.data ?? []) as FranjaRow[]),
+    ...data,
     requests: (reqRes.data ?? []) as {
       id: string;
       tipo: "librar" | "intercambio";
@@ -78,4 +111,13 @@ export async function getEmployeeView(token: string) {
       con_empleado_id: string | null;
     }[],
   };
+}
+
+/** Las últimas 4 semanas y las próximas 4 publicadas, para el calendario. */
+export async function getEmployeeCalendar(token: string) {
+  const me = await getEmployeeByToken(token);
+  if (!me) return null;
+  const thisMonday = mondayOf(todayInMadrid());
+  const data = await loadPublished(me, addDays(thisMonday, -28), addDays(thisMonday, 28));
+  return { me, ...data };
 }

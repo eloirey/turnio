@@ -12,6 +12,7 @@ select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111
 -- ---------- Encargado A monta su local ----------
 insert into public.locales (id, owner_id, nombre)
 values ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Bar A');
+insert into public.puestos (local_id, clave, nombre) values ('aaaaaaaa-0000-0000-0000-000000000001', 'barra', 'Barra');
 insert into public.empleados (id, local_id, nombre, puesto, horas_contrato) values
   ('e0000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'Laura', 'barra', 32),
   ('e0000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'Pol', 'barra', 16);

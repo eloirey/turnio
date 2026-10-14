@@ -78,3 +78,16 @@ export function longDateLabel(iso: string): string {
   const d = toUTC(iso);
   return `${DAY_LONG[(d.getUTCDay() + 6) % 7]} ${d.getUTCDate()} de ${MONTHS[d.getUTCMonth()]}`;
 }
+
+const MONTHS_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/** "2026-10-20" → "20 oct" */
+export function shortDateLabel(iso: string): string {
+  const d = toUTC(iso);
+  return `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`;
+}
+
+/** Rango corto: "14 oct – 20 oct", o una sola fecha si coinciden. */
+export function rangeLabel(from: string, to: string): string {
+  return from === to ? shortDateLabel(from) : `${shortDateLabel(from)} – ${shortDateLabel(to)}`;
+}

@@ -1,135 +1,97 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { cache } from "react";
+import type { Role } from "@/lib/roles";
+import type { AbsenceMap, Demand, Grid, Rules, ShiftCatalog } from "@/lib/schedule/types";
 import { createClient } from "@/lib/supabase/server";
 import {
+  absencesForWeek,
   franjasToCatalog,
   localToRules,
   rowsToDemand,
   rowsToGrid,
   toEmployees,
+  toRoles,
+  type AusenciaRow,
   type DemandaRow,
   type DisponibilidadRow,
   type EmpleadoRow,
+  type EmployeeRecord,
   type FranjaRow,
   type LocalRow,
+  type PuestoRow,
   type TurnoRow,
 } from "./mappers";
 
 /**
  * Lecturas del encargado. Todas usan el cliente con su sesión, así que la
  * base de datos solo devuelve filas de SUS locales (RLS).
+ *
+ * Rendimiento: cada pantalla hace UNA llamada a la base de datos (funciones
+ * cargar_local / cargar_semana) y `cache()` evita repetirla si el layout y la
+ * página la piden en la misma petición. Importa porque el servidor puede
+ * estar lejos de la base de datos.
  */
 
-export async function getUser() {
+/** Usuario de la sesión (verifica el token; con claves asimétricas, sin ir a la red). */
+export const getUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  const { data } = await supabase.auth.getClaims();
+  return (data?.claims?.sub as string | undefined) ?? null;
+});
+
+export async function requireUser(): Promise<string> {
+  const id = await getUserId();
+  if (!id) redirect("/login");
+  return id;
 }
 
-export async function requireUser() {
-  const user = await getUser();
-  if (!user) redirect("/login");
-  return user;
+export interface LocalBundle {
+  local: LocalRow;
+  rules: Rules;
+  roles: Role[];
+  employees: EmployeeRecord[];
+  demand: Demand;
+  shifts: ShiftCatalog;
 }
 
-export async function getMyLocal(): Promise<LocalRow | null> {
+interface CargarLocal {
+  local: LocalRow;
+  puestos: PuestoRow[];
+  empleados: (EmpleadoRow & { disponibilidad: DisponibilidadRow[] })[];
+  demanda: DemandaRow[];
+  franjas: FranjaRow[];
+}
+
+/** Todo lo del local en una consulta (o null si aún no ha creado ninguno). */
+export const getLocalBundle = cache(async (): Promise<LocalBundle | null> => {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("locales")
-    .select("id, nombre, max_noches_seguidas, prohibir_noche_manana")
-    .order("created_at")
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("cargar_local");
   if (error) throw error;
-  return data as LocalRow | null;
-}
+  if (!data) return null;
+  const d = data as CargarLocal;
+  return {
+    local: d.local,
+    rules: localToRules(d.local),
+    roles: toRoles(d.puestos),
+    employees: toEmployees(
+      d.empleados,
+      d.empleados.flatMap((e) => e.disponibilidad),
+    ),
+    demand: rowsToDemand(d.demanda),
+    shifts: franjasToCatalog(d.franjas),
+  };
+});
 
 /** Usuario con sesión y con local creado; si no, lo manda donde toca. */
-export async function requireLocal(): Promise<LocalRow> {
+export async function requireLocal(): Promise<LocalBundle> {
   await requireUser();
-  const local = await getMyLocal();
-  if (!local) redirect("/bienvenida");
-  return local;
+  const bundle = await getLocalBundle();
+  if (!bundle) redirect("/bienvenida");
+  return bundle;
 }
 
-export async function getEmployees(localId: string) {
-  const supabase = await createClient();
-  const { data: emps, error } = await supabase
-    .from("empleados")
-    .select("id, nombre, puesto, horas_contrato, telefono, token_acceso, activo")
-    .eq("local_id", localId)
-    .eq("activo", true)
-    .order("created_at");
-  if (error) throw error;
-  const rows = (emps ?? []) as EmpleadoRow[];
-  if (rows.length === 0) return [];
-
-  const { data: disp, error: e2 } = await supabase
-    .from("disponibilidad")
-    .select("empleado_id, dia, franja")
-    .in(
-      "empleado_id",
-      rows.map((r) => r.id),
-    );
-  if (e2) throw e2;
-  return toEmployees(rows, (disp ?? []) as DisponibilidadRow[]);
-}
-
-export async function getDemand(localId: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("demanda").select("dia, franja, puesto, cantidad").eq("local_id", localId);
-  if (error) throw error;
-  return rowsToDemand((data ?? []) as DemandaRow[]);
-}
-
-export async function getShifts(localId: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("franjas").select("franja, etiqueta, inicio, fin, horas").eq("local_id", localId);
-  if (error) throw error;
-  return franjasToCatalog((data ?? []) as FranjaRow[]);
-}
-
-export interface WeekRow {
-  id: string;
-  fecha_inicio: string;
-  estado: "borrador" | "publicado" | "cambios";
-  publicado_at: string | null;
-}
-
-/** Devuelve la semana (la crea vacía si aún no existe). */
-export async function getOrCreateWeek(localId: string, monday: string): Promise<{ week: WeekRow; isNew: boolean }> {
-  const supabase = await createClient();
-  const cols = "id, fecha_inicio, estado, publicado_at";
-  const { data: existing, error } = await supabase
-    .from("semanas")
-    .select(cols)
-    .eq("local_id", localId)
-    .eq("fecha_inicio", monday)
-    .maybeSingle();
-  if (error) throw error;
-  if (existing) return { week: existing as WeekRow, isNew: false };
-
-  const { data: created, error: e2 } = await supabase
-    .from("semanas")
-    .insert({ local_id: localId, fecha_inicio: monday })
-    .select(cols)
-    .single();
-  if (e2) {
-    // Dos pestañas a la vez: la otra la creó primero. Volvemos a leer.
-    if (e2.code === "23505") return getOrCreateWeek(localId, monday);
-    throw e2;
-  }
-  return { week: created as WeekRow, isNew: true };
-}
-
-export async function getWeekGrid(weekId: string, employeeIds: string[]) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("turnos").select("empleado_id, dia, franja").eq("semana_id", weekId);
-  if (error) throw error;
-  return rowsToGrid(employeeIds, (data ?? []) as TurnoRow[]);
-}
+export type WeekStatus = "borrador" | "publicado" | "cambios";
 
 export interface PendingRequest {
   id: string;
@@ -140,23 +102,68 @@ export interface PendingRequest {
   conEmpleadoId: string | null;
 }
 
-export async function getPendingRequests(weekId: string): Promise<PendingRequest[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("solicitudes")
-    .select("id, tipo, dia, mensaje, empleado_id, con_empleado_id")
-    .eq("semana_id", weekId)
-    .eq("estado", "pendiente")
-    .order("created_at");
-  if (error) throw error;
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    tipo: r.tipo,
-    dia: r.dia,
-    mensaje: r.mensaje,
-    empleadoId: r.empleado_id,
-    conEmpleadoId: r.con_empleado_id,
-  }));
+export interface WeekData {
+  id: string;
+  status: WeekStatus;
+  publishedAt: string | null;
+  turnos: TurnoRow[];
+  requests: PendingRequest[];
+  absenceRows: AusenciaRow[];
+  previousWeekHasShifts: boolean;
+  anyPublished: boolean;
 }
 
-export { localToRules };
+interface CargarSemana {
+  semana: { id: string; fecha_inicio: string; estado: WeekStatus; publicado_at: string | null };
+  turnos: TurnoRow[];
+  solicitudes: { id: string; tipo: "librar" | "intercambio"; dia: number; mensaje: string | null; empleado_id: string; con_empleado_id: string | null }[];
+  ausencias: AusenciaRow[];
+  semana_anterior_con_turnos: boolean;
+  alguna_publicada: boolean;
+}
+
+/** Todo lo de una semana en una consulta (la crea vacía si no existe). */
+export async function getWeekData(monday: string): Promise<WeekData | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("cargar_semana", { p_lunes: monday });
+  if (error) throw error;
+  if (!data) return null;
+  const d = data as CargarSemana;
+  return {
+    id: d.semana.id,
+    status: d.semana.estado,
+    publishedAt: d.semana.publicado_at,
+    turnos: d.turnos,
+    requests: d.solicitudes.map((s) => ({
+      id: s.id,
+      tipo: s.tipo,
+      dia: s.dia,
+      mensaje: s.mensaje,
+      empleadoId: s.empleado_id,
+      conEmpleadoId: s.con_empleado_id,
+    })),
+    absenceRows: d.ausencias,
+    previousWeekHasShifts: d.semana_anterior_con_turnos,
+    anyPublished: d.alguna_publicada,
+  };
+}
+
+export function weekGrid(week: WeekData, employeeIds: string[]): Grid {
+  return rowsToGrid(employeeIds, week.turnos);
+}
+
+export function weekAbsences(week: WeekData, monday: string): AbsenceMap {
+  return absencesForWeek(week.absenceRows, monday);
+}
+
+/** Ausencias de hoy en adelante, para la ficha de cada empleado. */
+export async function getUpcomingAbsences(fromISO: string): Promise<AusenciaRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ausencias")
+    .select("id, empleado_id, desde, hasta, motivo, nota")
+    .gte("hasta", fromISO)
+    .order("desde");
+  if (error) throw error;
+  return (data ?? []) as AusenciaRow[];
+}

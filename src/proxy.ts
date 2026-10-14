@@ -28,11 +28,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims verifica el token (localmente si el proyecto usa claves asimétricas)
+  // y lo renueva si está a punto de caducar.
+  const { data } = await supabase.auth.getClaims();
 
-  if (!user) {
+  if (!data?.claims?.sub) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.search = "";
