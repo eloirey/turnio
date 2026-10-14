@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Tokens de diseño de Turnio (sacados del lienzo de diseño).
+ * Tokens de diseño de Rotafy (sacados del lienzo de diseño).
  * Usa siempre estos nombres en las clases: bg-ground, text-ink, bg-accent...
  * Si cambias un color aquí, cambia en toda la app.
  */

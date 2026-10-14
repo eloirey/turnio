@@ -5,7 +5,7 @@ import { ui } from "./ui";
 export function SetupNotice() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center gap-5 px-6 py-16">
-      <div className="font-display text-2xl font-bold text-accent">turnio</div>
+      <div className="font-display text-2xl font-bold text-accent">rotafy</div>
       <h1 className={ui.h1}>Falta conectar Supabase</h1>
       <ol className="list-decimal space-y-2 pl-5 text-ink-soft">
         <li>Crea un proyecto gratuito en supabase.com (región Europa).</li>

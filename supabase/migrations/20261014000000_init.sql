@@ -1,5 +1,5 @@
 -- ============================================================
--- Turnio · esquema inicial
+-- Rotafy · esquema inicial
 -- Convenciones:
 --   dia:    0 = lunes … 6 = domingo (igual que en src/lib/schedule)
 --   franja: 'M' mañana, 'T' tarde, 'N' noche
@@ -36,7 +36,7 @@ create table public.empleados (
   puesto          text not null check (char_length(puesto) between 1 and 40),
   horas_contrato  smallint not null check (horas_contrato between 1 and 60),
   telefono        text,
-  -- Enlace personal del empleado (turnio.app/h/<token>), sin cuenta.
+  -- Enlace personal del empleado (rotafy.es/h/<token>), sin cuenta.
   token_acceso    text not null unique default replace(gen_random_uuid()::text, '-', ''),
   activo          boolean not null default true,
   created_at      timestamptz not null default now()

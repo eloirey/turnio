@@ -11,7 +11,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { RequestForm } from "./RequestForm";
 
 export const metadata: Metadata = {
-  title: "Mi horario · Turnio",
+  title: "Mi horario · Rotafy",
   robots: { index: false, follow: false }, // enlaces privados: que no salgan en Google
 };
 
@@ -46,7 +46,7 @@ async function EmployeeSchedule({ params }: { params: Params }) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-ground px-5 pb-10 pt-7">
       <header>
-        <div className="font-display text-lg font-bold text-accent">turnio</div>
+        <div className="font-display text-lg font-bold text-accent">rotafy</div>
         <h1 className="mt-1.5 font-display text-[30px] font-bold tracking-tight">Hola, {me.nombre}</h1>
         <p className="text-sm text-ink-soft">
           {localName} · {ROLE_LABELS[me.puesto] ?? me.puesto}

@@ -3,7 +3,7 @@ import { ui } from "@/components/ui";
 import { getDemand, getShifts, localToRules, requireLocal } from "@/lib/data/queries";
 import { NecesidadesEditor } from "./NecesidadesEditor";
 
-export const metadata = { title: "Necesidades · Turnio" };
+export const metadata = { title: "Necesidades · Rotafy" };
 
 async function Content() {
   const local = await requireLocal();

@@ -25,7 +25,7 @@ export function RequestForm({ token, weeks, mates }: Props) {
   if (!open || state.ok) {
     return (
       <div className="flex flex-col gap-3">
-        {state.ok && <p className={ui.success} role="status">Solicitud enviada. Tu encargado la verá en Turnio.</p>}
+        {state.ok && <p className={ui.success} role="status">Solicitud enviada. Tu encargado la verá en Rotafy.</p>}
         <button onClick={() => setOpen(true)} className={`${ui.btn} h-[52px] w-full bg-ink text-white`}>
           Pedir un cambio
         </button>

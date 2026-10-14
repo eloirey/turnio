@@ -1,4 +1,4 @@
-# Turnio
+# Rotafy
 
 Cuadrantes de turnos para hostelería pequeña: genera el horario semanal según la disponibilidad y las horas de contrato de cada empleado, avisa de los conflictos y manda a cada uno su horario por WhatsApp con un enlace personal.
 
@@ -98,10 +98,10 @@ supabase/
 Si tienes PostgreSQL instalado:
 
 ```bash
-createdb turnio_test
-psql -d turnio_test -f supabase/tests/00_stub_supabase.sql
-psql -d turnio_test -f supabase/migrations/20261014000000_init.sql
-psql -d turnio_test -f supabase/tests/10_rls_y_funciones.sql   # debe terminar en "TODAS LAS PRUEBAS ... PASAN"
+createdb rotafy_test
+psql -d rotafy_test -f supabase/tests/00_stub_supabase.sql
+psql -d rotafy_test -f supabase/migrations/20261014000000_init.sql
+psql -d rotafy_test -f supabase/tests/10_rls_y_funciones.sql   # debe terminar en "TODAS LAS PRUEBAS ... PASAN"
 ```
 
 ## Hoja de ruta
