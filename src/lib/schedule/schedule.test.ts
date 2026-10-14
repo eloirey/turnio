@@ -101,3 +101,15 @@ describe("validador", () => {
     expect(kinds).toContain("marta:outside-availability");
   });
 });
+
+describe("plantilla inicial", () => {
+  it("pone refuerzo en sala y barra las noches de viernes y sábado", async () => {
+    const { starterDemand } = await import("./templates");
+    const d = starterDemand(["sala", "cocina", "barra"]);
+    expect(d).toHaveLength(7);
+    expect(d[0].N).toEqual({ sala: 1, cocina: 1, barra: 1 });
+    expect(d[4].N).toEqual({ sala: 2, cocina: 1, barra: 2 });
+    expect(d[6].M).toEqual({ sala: 1, cocina: 1, barra: 1 });
+    expect(starterDemand([])[0]).toEqual({});
+  });
+});
