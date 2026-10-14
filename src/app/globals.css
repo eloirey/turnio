@@ -1,26 +1,48 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Tokens de diseño de Turnio (sacados del lienzo de diseño).
+ * Usa siempre estos nombres en las clases: bg-ground, text-ink, bg-accent...
+ * Si cambias un color aquí, cambia en toda la app.
+ */
+@theme {
+  /* Superficies y texto */
+  --color-ground: #F4F3EE;      /* fondo de la app */
+  --color-surface: #FFFFFF;     /* tarjetas y paneles */
+  --color-line: #E4E1D8;        /* bordes suaves */
+  --color-line-strong: #D9D5CA; /* bordes de botones e inputs */
+  --color-ink: #1B1B1A;         /* texto principal */
+  --color-ink-soft: #4A4843;    /* texto secundario */
+  --color-ink-muted: #6B6860;   /* etiquetas y pistas */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Marca */
+  --color-accent: #1F5C46;
+  --color-accent-soft: #EEF3EF;
+  --color-accent-ink: #123B2C;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Estados */
+  --color-danger: #B4441A;
+  --color-danger-soft: #FBE6DD;
+  --color-danger-ink: #9A3412;
+  --color-ok-soft: #E6F0EA;
+  --color-pending-soft: #FBEFD5;
+  --color-pending-ink: #7A4B00;
+
+  /* Puestos (fondo / texto) */
+  --color-sala: #DCE7F5;
+  --color-sala-ink: #1D3557;
+  --color-cocina: #F9DEC9;
+  --color-cocina-ink: #6E2E0B;
+  --color-barra: #DDEBD3;
+  --color-barra-ink: #2A4A1C;
+
+  /* Tipografía */
+  --font-sans: "DM Sans Variable", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }
