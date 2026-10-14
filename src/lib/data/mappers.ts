@@ -3,10 +3,13 @@
  * dato) y los tipos del dominio que usa el generador (en inglés, estructuras).
  * Son funciones puras: se testean sin base de datos.
  */
+import { addDays } from "@/lib/dates";
+import type { Role } from "@/lib/roles";
 import { DEFAULT_RULES, DEFAULT_SHIFTS } from "@/lib/schedule/defaults";
 import {
   DAYS_IN_WEEK,
   SLOTS,
+  type AbsenceMap,
   type Code,
   type Demand,
   type Employee,
@@ -21,7 +24,13 @@ export interface LocalRow {
   id: string;
   nombre: string;
   max_noches_seguidas: number;
-  prohibir_noche_manana: boolean;
+  descanso_minimo_horas: number;
+  min_dias_libres: number;
+}
+export interface PuestoRow {
+  clave: string;
+  nombre: string;
+  color: number;
 }
 export interface EmpleadoRow {
   id: string;
@@ -55,6 +64,23 @@ export interface FranjaRow {
   fin: string;
   horas: number | string; // numeric llega como texto desde PostgREST
 }
+export interface AusenciaRow {
+  id: string;
+  empleado_id: string;
+  desde: string;
+  hasta: string;
+  motivo: AbsenceReason;
+  nota?: string | null;
+}
+export type AbsenceReason = "vacaciones" | "baja" | "permiso" | "otro";
+
+export const ABSENCE_LABELS: Record<AbsenceReason, string> = {
+  vacaciones: "Vacaciones",
+  baja: "Baja",
+  permiso: "Permiso",
+  otro: "Ausencia",
+};
+
 /** Copia publicada: { empleado_id: { "0": "M", ... } } */
 export type Snapshot = Record<string, Record<string, Slot>>;
 
@@ -80,6 +106,10 @@ export function toEmployees(rows: EmpleadoRow[], availability: DisponibilidadRow
       token: r.token_acceso,
     };
   });
+}
+
+export function toRoles(rows: PuestoRow[]): Role[] {
+  return rows.map((r) => ({ key: r.clave, name: r.nombre, color: r.color }));
 }
 
 export function availabilityToRows(employeeId: string, availability: Record<Slot, boolean[]>): DisponibilidadRow[] {
@@ -138,6 +168,19 @@ export function snapshotToGrid(employeeIds: string[], snapshot: Snapshot | null)
   return rowsToGrid(employeeIds, turnos);
 }
 
+/** Ausencias que tocan la semana → para cada empleado, el motivo de cada día (o null). */
+export function absencesForWeek(rows: AusenciaRow[], monday: string): AbsenceMap {
+  const map: AbsenceMap = {};
+  const days = Array.from({ length: DAYS_IN_WEEK }, (_, i) => addDays(monday, i));
+  for (const a of rows) {
+    const week = (map[a.empleado_id] ??= Array<string | null>(DAYS_IN_WEEK).fill(null));
+    days.forEach((iso, i) => {
+      if (iso >= a.desde && iso <= a.hasta) week[i] = a.motivo;
+    });
+  }
+  return map;
+}
+
 export function franjasToCatalog(rows: FranjaRow[]): ShiftCatalog {
   const catalog: ShiftCatalog = { ...DEFAULT_SHIFTS };
   for (const r of rows) {
@@ -155,6 +198,7 @@ export function franjasToCatalog(rows: FranjaRow[]): ShiftCatalog {
 export function localToRules(local: LocalRow): Rules {
   return {
     maxConsecutiveNights: local.max_noches_seguidas ?? DEFAULT_RULES.maxConsecutiveNights,
-    forbidNightThenMorning: local.prohibir_noche_manana ?? DEFAULT_RULES.forbidNightThenMorning,
+    minRestHours: local.descanso_minimo_horas ?? DEFAULT_RULES.minRestHours,
+    minDaysOff: local.min_dias_libres ?? DEFAULT_RULES.minDaysOff,
   };
 }

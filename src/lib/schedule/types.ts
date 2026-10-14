@@ -18,7 +18,7 @@ export interface ShiftDef {
   code: Slot;
   label: string; // "Mañana"
   start: string; // "09:00"
-  end: string; // "17:00"
+  end: string; // "17:00" (si es menor que start, termina al día siguiente)
   hours: number;
 }
 
@@ -27,7 +27,7 @@ export type ShiftCatalog = Record<Slot, ShiftDef>;
 export interface Employee {
   id: string;
   name: string;
-  /** Puesto: "sala", "cocina", "barra"… lo define cada local. */
+  /** Clave del puesto ("sala", "caja"…): cada local define los suyos. */
   role: string;
   contractHours: number;
   /** availability[franja][día] === true si puede trabajar esa franja ese día. */
@@ -45,11 +45,19 @@ export type Demand = DayDemand[];
 /** El cuadrante: para cada empleado (por id), 7 casillas. */
 export type Grid = Record<string, Code[]>;
 
+/**
+ * Ausencias de la semana: para cada empleado, 7 posiciones con el motivo
+ * ("vacaciones", "baja"…) o null si ese día está disponible.
+ */
+export type AbsenceMap = Record<string, (string | null)[]>;
+
 export interface Rules {
   /** Máximo de noches (cierres) seguidas. Por defecto 2. */
   maxConsecutiveNights: number;
-  /** Prohibido entrar de mañana justo después de cerrar la noche anterior. */
-  forbidNightThenMorning: boolean;
+  /** Horas mínimas de descanso entre el fin de una jornada y el inicio de la siguiente (Estatuto: 12). */
+  minRestHours: number;
+  /** Días libres mínimos por semana. */
+  minDaysOff: number;
 }
 
 export interface Gap {
@@ -61,8 +69,10 @@ export interface Gap {
 
 export type IssueKind =
   | "consecutive-nights"
-  | "night-then-morning"
+  | "short-rest"
+  | "absence-conflict"
   | "outside-availability"
+  | "too-few-days-off"
   | "over-contract";
 
 export interface Issue {

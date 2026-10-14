@@ -14,11 +14,14 @@ import {
   demandToRows,
   franjasToCatalog,
   gridToTurnos,
+  absencesForWeek,
+  localToRules,
   rowsToDemand,
   rowsToGrid,
   snapshotToGrid,
   toEmployees,
 } from "./data/mappers";
+import { buildIcs, escapeText, foldLine } from "./ics";
 import { normalizePhone, whatsappLink } from "./whatsapp";
 
 describe("fechas", () => {
@@ -132,5 +135,58 @@ describe("mappers", () => {
     const cat = franjasToCatalog([{ franja: "N", etiqueta: "Noche", inicio: "18:00:00", fin: "02:00:00", horas: "8.00" }]);
     expect(cat.N).toEqual({ code: "N", label: "Noche", start: "18:00", end: "02:00", hours: 8 });
     expect(cat.M.label).toBe("Mañana"); // las que faltan usan el valor por defecto
+  });
+});
+
+describe("ausencias y reglas desde la base de datos", () => {
+  it("convierte ausencias en días de la semana, recortando a la semana", () => {
+    const map = absencesForWeek(
+      [
+        { id: "1", empleado_id: "a", desde: "2026-10-08", hasta: "2026-10-13", motivo: "vacaciones" },
+        { id: "2", empleado_id: "b", desde: "2026-10-18", hasta: "2026-10-30", motivo: "baja" },
+      ],
+      "2026-10-12",
+    );
+    expect(map.a).toEqual(["vacaciones", "vacaciones", null, null, null, null, null]);
+    expect(map.b).toEqual([null, null, null, null, null, null, "baja"]);
+  });
+
+  it("lee las reglas del local", () => {
+    expect(localToRules({ id: "x", nombre: "Bar", max_noches_seguidas: 3, descanso_minimo_horas: 12, min_dias_libres: 2 })).toEqual({
+      maxConsecutiveNights: 3,
+      minRestHours: 12,
+      minDaysOff: 2,
+    });
+  });
+});
+
+describe("calendario .ics", () => {
+  const ics = buildIcs({
+    calendarName: "Turnos · Bar, La Plaza",
+    now: new Date("2026-10-14T10:00:00Z"),
+    events: [{ uid: "w-e-2@rotafy.es", date: "2026-10-14", start: "17:00", end: "01:00", summary: "Noche · Bar" }],
+  });
+
+  it("usa CRLF y empieza y acaba bien", () => {
+    expect(ics.startsWith("BEGIN:VCALENDAR\r\n")).toBe(true);
+    expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
+    expect(ics.split("\r\n").every((l) => !l.includes("\n"))).toBe(true);
+  });
+
+  it("un turno que cruza la medianoche termina al día siguiente, en hora de Madrid", () => {
+    expect(ics).toContain("DTSTART;TZID=Europe/Madrid:20261014T170000");
+    expect(ics).toContain("DTEND;TZID=Europe/Madrid:20261015T010000");
+    expect(ics).toContain("TZID:Europe/Madrid");
+  });
+
+  it("escapa comas, puntos y coma y saltos de línea", () => {
+    expect(escapeText("a,b;c\\d\ne")).toBe("a\\,b\\;c\\\\d\\ne");
+    expect(ics).toContain("X-WR-CALNAME:Turnos · Bar\\, La Plaza");
+  });
+
+  it("parte las líneas largas sin superar 75 octetos", () => {
+    const folded = foldLine("SUMMARY:" + "á".repeat(60));
+    for (const part of folded.split("\r\n")) expect(new TextEncoder().encode(part).length).toBeLessThanOrEqual(75);
+    expect(folded.split("\r\n").slice(1).every((p) => p.startsWith(" "))).toBe(true);
   });
 });

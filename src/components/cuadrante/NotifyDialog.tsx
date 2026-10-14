@@ -62,7 +62,7 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
               </p>
             )}
           </div>
-          <button ref={closeRef} aria-label="Cerrar" onClick={onClose} className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] border border-line-strong">
+          <button ref={closeRef} aria-label="Cerrar" onClick={onClose} className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] border border-line-strong text-ink-soft hover:border-ink hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
             ✕
           </button>
         </div>

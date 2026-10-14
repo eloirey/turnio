@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { demandToRows } from "@/lib/data/mappers";
-import { getMyLocal, requireUser } from "@/lib/data/queries";
-import { ROLES } from "@/lib/roles";
+import { getLocalBundle, requireUser } from "@/lib/data/queries";
+import { makeRoleKey, PALETTE } from "@/lib/roles";
 import { starterDemand } from "@/lib/schedule/templates";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,28 +14,35 @@ export interface OnboardingState {
 
 const schema = z.object({
   nombre: z.string().trim().min(1, "Ponle nombre a tu local").max(120),
-  puestos: z.array(z.enum(ROLES)).min(1, "Elige al menos un puesto"),
+  puestos: z
+    .array(z.string().trim().max(40, "Nombre de puesto demasiado largo"))
+    .transform((l) => l.filter(Boolean))
+    .pipe(z.array(z.string()).min(1, "Añade al menos un puesto").max(30)),
 });
 
 export async function createLocal(_prev: OnboardingState, formData: FormData): Promise<OnboardingState> {
-  const user = await requireUser();
-  if (await getMyLocal()) redirect("/app");
+  await requireUser();
+  if (await getLocalBundle()) redirect("/app");
 
-  const parsed = schema.safeParse({ nombre: formData.get("nombre"), puestos: formData.getAll("puestos") });
+  const parsed = schema.safeParse({ nombre: formData.get("nombre"), puestos: formData.getAll("puesto") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const names = parsed.data.puestos;
+  if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) return { error: "Hay dos puestos con el mismo nombre." };
+
+  const keys: string[] = [];
+  const puestos = names.map((nombre, i) => {
+    const clave = makeRoleKey(nombre, keys);
+    keys.push(clave);
+    return { clave, nombre, color: i % PALETTE.length };
+  });
 
   const supabase = await createClient();
-  const { data: local, error } = await supabase
-    .from("locales")
-    .insert({ owner_id: user.id, nombre: parsed.data.nombre })
-    .select("id")
-    .single();
-  if (error || !local) return { error: "No se ha podido crear el local. Inténtalo de nuevo." };
-
-  const rows = demandToRows(starterDemand(parsed.data.puestos)).map((r) => ({ ...r, local_id: local.id }));
-  if (rows.length) {
-    const { error: e2 } = await supabase.from("demanda").insert(rows);
-    if (e2) return { error: "Se creó el local, pero no la plantilla de necesidades. Configúrala en Necesidades." };
-  }
+  // Todo en una operación atómica: local + puestos + plantilla de necesidades.
+  const { error } = await supabase.rpc("crear_local", {
+    p_nombre: parsed.data.nombre,
+    p_puestos: puestos,
+    p_demanda: demandToRows(starterDemand(keys)),
+  });
+  if (error) return { error: "No se ha podido crear el local. Inténtalo de nuevo." };
   redirect("/app/empleados?nuevo=1");
 }
