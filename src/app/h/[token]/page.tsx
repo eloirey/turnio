@@ -184,6 +184,15 @@ async function EmployeeSchedule({ params }: { params: Params }) {
         mates={team.filter((t) => t.id !== me.id).map((t) => ({ id: t.id, nombre: t.nombre }))}
       />
 
+      <section aria-label="Tu enlace" className="flex gap-3 rounded-2xl border border-line bg-surface p-4 text-[13px] leading-relaxed text-ink-soft">
+        <span aria-hidden className="text-lg leading-none">
+          🔒
+        </span>
+        <p>
+          <strong className="text-ink">Este enlace es solo tuyo.</strong> No lo compartas: con él se ve tu horario y se ficha a tu nombre. Si crees que alguien más lo tiene, pide a tu encargado que te lo cambie.
+        </p>
+      </section>
+
       <footer className="mt-4 text-center text-[13px] text-ink-muted">
         Horario hecho con{" "}
         <Link href="/?ref=empleado" className="font-semibold text-accent">

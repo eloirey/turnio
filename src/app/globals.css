@@ -56,6 +56,10 @@ body {
 .prose-legal li { margin-bottom: 0.4em; }
 .prose-legal strong { color: var(--color-ink); }
 .prose-legal a { color: var(--color-accent); text-decoration: underline; }
+.prose-legal table { width: 100%; border-collapse: collapse; margin-bottom: 1.2em; font-size: 14px; line-height: 1.5; display: block; overflow-x: auto; }
+.prose-legal th, .prose-legal td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--color-line); }
+.prose-legal th { color: var(--color-ink); font-weight: 600; }
+.prose-legal code { font-size: 13px; background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
 .prose-legal .updated { font-size: 14px; color: var(--color-ink-muted); margin-top: 0.5em; }
 
 /* Al imprimir el cuadrante: blanco, sin sombras y apaisado */

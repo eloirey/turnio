@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { GuidePanel, GuideWaiting, guideBtn, highlightTour } from "@/components/guide/GuidePanel";
 import { Cuadrante, type Persistence } from "@/components/cuadrante/Cuadrante";
 import { Logo } from "@/components/Logo";
 import { NavProvider } from "@/components/nav";
@@ -102,6 +103,10 @@ export function DemoApp() {
           const employees = st.employees.filter((e) => e.id !== id);
           return { ...st, employees, grid: normalizeGrid(st.grid, employees), absences: st.absences.filter((a) => a.empleado_id !== id), records: st.records.filter((r) => r.employeeId !== id) };
         });
+        return next({ ok: true as const, id });
+      },
+      newLink: async (id) => {
+        update((st) => ({ ...st, employees: st.employees.map((e) => (e.id === id ? { ...e, token: `${st.seq}`.padStart(32, "b") } : e)), seq: st.seq + 1 }));
         return next({ ok: true as const, id });
       },
       addAbsence: async (a) => {
@@ -270,9 +275,7 @@ export function DemoApp() {
 
   useEffect(() => {
     if (!state || guideHidden || !current?.highlight || current.tab !== tab) return;
-    const el = document.querySelector(`[data-tour="${current.highlight}"]`);
-    el?.classList.add("tour-pulse");
-    return () => el?.classList.remove("tour-pulse");
+    return highlightTour(current.highlight);
   }, [state, guideHidden, current, tab]);
 
   function onCuadranteEvent(event: "generated" | "published" | "edited") {
@@ -427,18 +430,41 @@ export function DemoApp() {
           ))}
 
         {!guideHidden && current && (
-          <Guide
+          <GuidePanel
             index={Math.min(step, steps.length - 1)}
             total={steps.length}
-            step={current}
-            onTab={tab === current.tab}
-            onGo={() => go(`/app/${current.tab}`)}
-            onNext={() => {
-              const n = Math.min(step + 1, steps.length - 1);
+            title={current.title}
+            body={current.body}
+            onHide={() => setGuideHidden(true)}
+            onBack={() => {
+              const n = Math.max(0, step - 1);
               setStep(n);
               go(`/app/${steps[n].tab}`);
             }}
-            onHide={() => setGuideHidden(true)}
+            action={
+              current.final ? (
+                <Link href="/login" className={`${ui.btn} bg-white text-ink hover:bg-ground`}>
+                  Crear mi cuenta gratis
+                </Link>
+              ) : tab !== current.tab ? (
+                <button onClick={() => go(`/app/${current.tab}`)} className={guideBtn}>
+                  Ir a {TAB_LABEL[current.tab]}
+                </button>
+              ) : current.cta ? (
+                <button
+                  onClick={() => {
+                    const n = Math.min(step + 1, steps.length - 1);
+                    setStep(n);
+                    go(`/app/${steps[n].tab}`);
+                  }}
+                  className={guideBtn}
+                >
+                  {current.cta} →
+                </button>
+              ) : (
+                <GuideWaiting />
+              )
+            }
           />
         )}
       </div>
@@ -490,7 +516,7 @@ function guideSteps(state: DemoState | null): GuideStep[] {
     {
       tab: "cuadrante",
       title: "Así avisas a tu equipo",
-      body: "Cada persona recibe por WhatsApp su horario y su enlace personal, donde lo consulta, ficha y lo añade a su calendario. Sin instalar nada.",
+      body: "Cada persona recibe por WhatsApp su horario y su enlace personal, donde lo consulta, ficha y lo añade a su calendario. Sin instalar nada. El enlace es único de cada uno y no se comparte: si se pierde, lo cambias desde Equipo.",
       cta: "Siguiente: fichajes",
     },
     {
@@ -508,44 +534,4 @@ function guideSteps(state: DemoState | null): GuideStep[] {
   ];
 }
 
-function Guide(props: { index: number; total: number; step: GuideStep; onTab: boolean; onGo: () => void; onNext: () => void; onHide: () => void }) {
-  const { index, total, step, onTab, onGo, onNext, onHide } = props;
-  const TAB_LABEL: Record<DemoTab, string> = { cuadrante: "Cuadrante", fichajes: "Fichajes", empleados: "Equipo", necesidades: "Necesidades", ajustes: "Ajustes" };
-  return (
-    <aside
-      aria-label="Guía de la demo"
-      className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-ink/10 bg-ink p-4 text-white shadow-2xl sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px] sm:p-5 print:hidden"
-    >
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-white/60">
-          Guía · {index + 1} de {total}
-        </span>
-        <button onClick={onHide} className="min-h-9 rounded-lg px-2 text-[13px] text-white/70 hover:bg-white/10 hover:text-white">
-          Ocultar
-        </button>
-      </div>
-      <div className="mb-3 h-1 overflow-hidden rounded-full bg-white/15" aria-hidden>
-        <div className="h-full rounded-full bg-[#8FD3B0] transition-all" style={{ width: `${((index + 1) / total) * 100}%` }} />
-      </div>
-      <h2 className="font-display text-lg font-bold sm:text-xl">{step.title}</h2>
-      <p className="mt-1 text-sm leading-relaxed text-white/85 sm:mt-1.5 sm:text-[15px]">{step.body}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
-        {step.final ? (
-          <Link href="/login" className={`${ui.btn} bg-white text-ink hover:bg-ground`}>
-            Crear mi cuenta gratis
-          </Link>
-        ) : !onTab ? (
-          <button onClick={onGo} className={`${ui.btnSm} bg-white text-ink hover:bg-ground`}>
-            Ir a {TAB_LABEL[step.tab]}
-          </button>
-        ) : step.cta ? (
-          <button onClick={onNext} className={`${ui.btnSm} bg-white text-ink hover:bg-ground`}>
-            {step.cta} →
-          </button>
-        ) : (
-          <span className="text-[13px] text-[#8FD3B0]">Hazlo en la pantalla para seguir ↑</span>
-        )}
-      </div>
-    </aside>
-  );
-}
+const TAB_LABEL: Record<DemoTab, string> = { cuadrante: "Cuadrante", fichajes: "Fichajes", empleados: "Equipo", necesidades: "Necesidades", ajustes: "Ajustes" };

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = { title: "Política de privacidad · Rotafy" };
 
 /*
@@ -62,9 +64,9 @@ export default function PrivacidadPage() {
 
       <h2>6. Cuánto tiempo los guardamos</h2>
       <p>
-        Mientras la cuenta esté activa. El registro de jornada se conserva cuatro años, como exige la ley, aunque la persona deje la empresa. Si el titular borra
-        la cuenta desde Ajustes, se eliminan todos los datos del negocio, incluido el registro de jornada: la empresa debe descargarlo antes si necesita
-        conservarlo.
+        Mientras la cuenta esté activa. El registro de jornada se mantiene aunque la persona deje la empresa, para que esta pueda cumplir su obligación de
+        conservarlo cuatro años; aun así, la responsable de conservarlo es la empresa, y Rotafy le recomienda descargar una copia cada mes. Si el titular borra
+        la cuenta desde Ajustes, se eliminan todos los datos del negocio, incluido el registro de jornada: la empresa debe descargarlo antes.
       </p>
 
       <h2>7. Tus derechos</h2>
@@ -77,7 +79,14 @@ export default function PrivacidadPage() {
       <h2>8. Seguridad</h2>
       <p>
         Las comunicaciones van cifradas (HTTPS) y cada negocio solo puede acceder a sus propios datos gracias a controles en la propia base de datos. Los enlaces
-        personales de los empleados son privados, aleatorios y no aparecen en buscadores.
+        personales de los empleados son privados, aleatorios y no aparecen en buscadores. Cada enlace es solo para su empleado: si se comparte o se pierde, el
+        encargado puede cambiarlo y el anterior deja de funcionar.
+      </p>
+
+      <h2>9. Cookies</h2>
+      <p>
+        Solo usamos cookies técnicas necesarias para iniciar sesión, sin analítica ni publicidad. Tienes el detalle en la{" "}
+        <Link href="/legal/cookies">política de cookies</Link>.
       </p>
     </>
   );
