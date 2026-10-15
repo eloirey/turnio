@@ -12,7 +12,12 @@ export async function GET(request: NextRequest) {
   const nextParam = searchParams.get("next") ?? "/app";
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/app";
 
-  if (searchParams.get("error")) return NextResponse.redirect(`${origin}/login?error=cancelado`);
+  if (searchParams.get("error")) {
+    // Enlace del email ya usado o caducado (otp_expired…) ≠ haber cancelado el login con Google.
+    const detail = `${searchParams.get("error_code") ?? ""} ${searchParams.get("error_description") ?? ""}`.toLowerCase();
+    const kind = /otp|expired|invalid/.test(detail) ? "enlace" : "cancelado";
+    return NextResponse.redirect(`${origin}/login?error=${kind}`);
+  }
 
   if (code) {
     const supabase = await createClient();

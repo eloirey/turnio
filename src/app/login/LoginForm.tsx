@@ -6,7 +6,7 @@ import { ui } from "@/components/ui";
 import { signIn, signInWithGoogle, signUp, type AuthState } from "./actions";
 
 const LINK_ERRORS: Record<string, string> = {
-  enlace: "El enlace no es válido o ha caducado. Vuelve a intentarlo.",
+  enlace: "El enlace no es válido o ha caducado. Cada enlace sirve una sola vez y solo el último que pediste: pide uno nuevo y ábrelo en este mismo navegador.",
   cancelado: "Se canceló el inicio de sesión.",
 };
 
