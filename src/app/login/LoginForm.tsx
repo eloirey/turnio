@@ -10,11 +10,12 @@ const LINK_ERRORS: Record<string, string> = {
   cancelado: "Se canceló el inicio de sesión.",
 };
 
-export function LoginForm({ googleEnabled, initialError }: { googleEnabled: boolean; initialError?: string }) {
+export function LoginForm({ googleEnabled, initialError, invite }: { googleEnabled: boolean; initialError?: string; invite?: string }) {
   const [mode, setMode] = useState<"entrar" | "registro">("entrar");
   const [inState, inAction, inPending] = useActionState<AuthState, FormData>(signIn, {});
   const [upState, upAction, upPending] = useActionState<AuthState, FormData>(signUp, {});
-  const [gState, gAction, gPending] = useActionState<AuthState, FormData>(() => signInWithGoogle(), {});
+  const [gState, gAction, gPending] = useActionState<AuthState, FormData>((_prev, fd) => signInWithGoogle(fd), {});
+  const inviteField = invite ? <input type="hidden" name="invitacion" value={invite} /> : null;
 
   const isSignUp = mode === "registro";
   const state = isSignUp ? upState : inState;
@@ -40,6 +41,7 @@ export function LoginForm({ googleEnabled, initialError }: { googleEnabled: bool
       {googleEnabled && (
         <>
           <form action={gAction}>
+            {inviteField}
             <button type="submit" disabled={gPending} className={`${ui.btn} ${ui.secondary} w-full gap-3`}>
               <GoogleMark />
               {gPending ? "Conectando…" : "Continuar con Google"}
@@ -57,6 +59,7 @@ export function LoginForm({ googleEnabled, initialError }: { googleEnabled: bool
       )}
 
       <form action={isSignUp ? upAction : inAction} className="flex flex-col gap-4" key={mode}>
+        {inviteField}
         <label className={ui.label}>
           Email
           <input name="email" type="email" required autoComplete="email" defaultValue={state.email} className={ui.input} />

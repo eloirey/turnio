@@ -17,7 +17,7 @@ export async function saveEmployee(input: EmployeeInput): Promise<ActionResult> 
   const { local, roles, shifts } = await requireLocal();
   const parsed = employeeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  const { id, nombre, puesto, horasContrato, telefono, availability, minDaysOff, maxConsecutiveClosings, preferredDaysOff } = parsed.data;
+  const { id, nombre, puesto, horasContrato, telefono, availability, minDaysOff, maxConsecutiveClosings, preferredDaysOff, remoteDays } = parsed.data;
   if (!roles.some((r) => r.key === puesto)) return { ok: false, error: "Ese puesto no existe. Créalo en Ajustes." };
 
   const supabase = await createClient();
@@ -29,6 +29,7 @@ export async function saveEmployee(input: EmployeeInput): Promise<ActionResult> 
     min_dias_libres: minDaysOff ?? null,
     max_cierres_seguidos: maxConsecutiveClosings ?? null,
     prefiere_librar: [...new Set(preferredDaysOff ?? [])].sort(),
+    teletrabajo_dias: [...new Set(remoteDays ?? [])].sort(),
   };
 
   let employeeId = id;

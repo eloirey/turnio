@@ -16,6 +16,8 @@ interface Props {
   emptyText?: string;
   /** Cada cuánto se miran avisos nuevos (0 = nunca). */
   pollMs?: number;
+  /** Algo al pie del panel (p. ej. activar los avisos en el móvil). */
+  footer?: React.ReactNode;
 }
 
 const KIND: Record<AvisoTipo, { label: string; dot: string }> = {
@@ -27,7 +29,7 @@ const KIND: Record<AvisoTipo, { label: string; dot: string }> = {
 };
 
 /** Campanita con los avisos. Se actualiza sola cada minuto y al volver a la pestaña. */
-export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avisos.", pollMs = 60_000 }: Props) {
+export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avisos.", pollMs = 60_000, footer }: Props) {
   const [items, setItems] = useState<Aviso[]>(initial?.items ?? []);
   const [unread, setUnread] = useState(initial?.unread ?? 0);
   const [open, setOpen] = useState(false);
@@ -177,6 +179,7 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
                 })}
               </ul>
             )}
+            {footer && <div className="border-t border-line bg-ground px-4 py-3">{footer}</div>}
           </div>,
           document.body,
         )}

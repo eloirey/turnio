@@ -9,7 +9,7 @@ import { madridToIso } from "@/lib/fichajes";
 import type { Role } from "@/lib/roles";
 import { DEFAULT_RULES } from "@/lib/schedule/defaults";
 import { emptyGrid } from "@/lib/schedule/generator";
-import { spanHours, toHours } from "@/lib/schedule/rules";
+import { shiftHours, toHours } from "@/lib/schedule/rules";
 import { customShifts, getTemplate, templateDemand, templateRoles, templateShifts, templateTeam, type ShiftEdit } from "@/lib/schedule/templates";
 import { activeSlots, FREE, type Demand, type Grid, type Rules, type ShiftCatalog } from "@/lib/schedule/types";
 
@@ -79,7 +79,7 @@ export function createDemoState(input: { nombre: string; tipo: string; puestos: 
     shifts,
     demand: templateDemand(t, roles, shifts),
     rules: { ...DEFAULT_RULES },
-    settings: { clockIn: true, clockMarginMinutes: 10 },
+    settings: { clockIn: true, clockMarginMinutes: 10, clockControl: "no", clockHasPlace: false, clockRadius: 200, clockIps: [] },
     employees,
     // Alguien tiene vacaciones el fin de semana: el generador lo respeta.
     absences: last ? [{ id: "aus-1", empleado_id: last.id, desde: addDays(monday, 5), hasta: addDays(monday, 9), motivo: "vacaciones", nota: "Viaje" }] : [],
@@ -129,26 +129,34 @@ export function simulateClock(state: DemoState, grid: Grid): ClockRecord[] {
         inMin = 22;
         lateDone = true;
       }
-      const start = shifted(date, s.start, inMin);
-      if (Date.parse(start) > nowMs) continue; // aún no ha empezado
-      const endDate = toHours(s.end) <= toHours(s.start) ? addDays(date, 1) : date;
-      const end = shifted(endDate, s.end, Math.round(rand(`o${key}`) * 8) - 2);
-      const id = `rec-${records.length + 1}`;
-      if (!forgotDone && d === 2) {
-        forgotDone = true;
-        records.push({ id, employeeId: e.id, start, end: null, missingEnd: true, edited: false });
-      } else if (Date.parse(end) > nowMs) {
-        records.push({ id, employeeId: e.id, start, end: null, missingEnd: false, edited: false });
-      } else {
-        records.push({ id, employeeId: e.id, start, end, missingEnd: false, edited: false });
-      }
+      // Un turno partido son dos tramos: se ficha en cada uno.
+      const tramos: [string, string][] = s.start2 && s.end2 ? [[s.start, s.end], [s.start2, s.end2]] : [[s.start, s.end]];
+      tramos.forEach(([from, to], t) => {
+        const start = shifted(date, from, t === 0 ? inMin : Math.round(rand(`j${key}`) * 6) - 4);
+        if (Date.parse(start) > nowMs) return; // aún no ha empezado
+        const endDate = toHours(to) <= toHours(from) || (t === 1 && toHours(from) < toHours(s.start)) ? addDays(date, 1) : date;
+        const end = shifted(endDate, to, Math.round(rand(`o${key}${t}`) * 8) - 2);
+        const id = `rec-${records.length + 1}`;
+        if (!forgotDone && d === 2 && t === tramos.length - 1) {
+          forgotDone = true;
+          records.push({ id, employeeId: e.id, start, end: null, missingEnd: true, edited: false });
+        } else if (Date.parse(end) > nowMs) {
+          records.push({ id, employeeId: e.id, start, end: null, missingEnd: false, edited: false });
+        } else {
+          records.push({ id, employeeId: e.id, start, end, missingEnd: false, edited: false });
+        }
+      });
     }
   }
   return records;
 }
 
 /** Guarda las franjas como lo hace la base de datos: nuevas con todos disponibles, quitadas fuera. */
-export function applyShifts(state: DemoState, rows: { code: string; label: string; start: string; end: string; closing: boolean }[], demand: Demand): DemoState {
+export function applyShifts(
+  state: DemoState,
+  rows: { code: string; label: string; start: string; end: string; start2?: string | null; end2?: string | null; closing: boolean }[],
+  demand: Demand,
+): DemoState {
   const used = new Set(Object.values(state.grid).flat());
   const keep = new Set(rows.map((r) => r.code));
   const shifts: ShiftCatalog = {};
@@ -156,7 +164,9 @@ export function applyShifts(state: DemoState, rows: { code: string; label: strin
     if (!keep.has(code) && used.has(code)) shifts[code] = { ...def, active: false }; // archivada
   }
   rows.forEach((r, i) => {
-    shifts[r.code] = { code: r.code, label: r.label.trim(), start: r.start, end: r.end, hours: spanHours(r.start, r.end), closing: r.closing, order: i, active: true };
+    const start2 = r.start2 || null;
+    const end2 = r.end2 || null;
+    shifts[r.code] = { code: r.code, label: r.label.trim(), start: r.start, end: r.end, start2, end2, hours: shiftHours(r.start, r.end, start2, end2), closing: r.closing, order: i, active: true };
   });
   const isNew = (code: string) => !state.shifts[code];
   const employees = state.employees.map((e) => ({

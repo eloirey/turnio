@@ -3,7 +3,7 @@
  * una tabla que luego sale en Excel o en CSV.
  */
 import { addDays } from "@/lib/dates";
-import { madridTime, recordHours, STATUS_LABEL, type ClockDayRow } from "@/lib/fichajes";
+import { madridTime, placeText, recordHours, STATUS_LABEL, type ClockDayRow } from "@/lib/fichajes";
 import type { Table } from "@/lib/export-table";
 
 export type ClockModel = "detail" | "summary" | "byDay";
@@ -40,9 +40,12 @@ const statusColor = (kind: string) => (kind === "ok" ? OK : kind === "late" || k
 export function clockDetailTable(rows: ClockDayRow[], month: string, localName: string, now: Date): Table {
   const out: (string | number | null)[][] = [];
   const kinds: string[] = [];
+  // La columna «Dónde» solo sale si el local comprueba desde dónde se ficha.
+  const withPlace = rows.some((r) => r.records.some((x) => x.placeIn || x.placeOut));
   for (const row of rows) {
     const tramos = row.records.length ? row.records : [null];
     for (const r of tramos) {
+      const where = r ? [placeText(r.placeIn, r.distIn), r.end ? placeText(r.placeOut, r.distOut) : ""].filter(Boolean).join(" / ") : "";
       out.push([
         dateEs(row.date),
         row.name,
@@ -52,21 +55,27 @@ export function clockDetailTable(rows: ClockDayRow[], month: string, localName: 
         r ? round2(recordHours(r, now)) : 0,
         row.planned,
         STATUS_LABEL[row.status] ?? "",
+        ...(withPlace ? [where] : []),
         r?.edited ? "Sí" : "No",
         r?.edited ? (row.lastReason ?? "") : "",
       ]);
       kinds.push(row.status);
     }
   }
+  const header = ["Fecha", "Persona", "Puesto", "Entrada", "Salida", "Horas", "Turno previsto", "Estado", ...(withPlace ? ["Dónde fichó"] : []), "Corregido", "Motivo de la corrección"];
   return {
     sheet: "Registro",
     title: `Registro de jornada · ${localName} · ${monthLabel(month)}`,
     subtitle: "Una fila por cada entrada y salida. Las horas van en decimal (7,50 = 7 h 30 min).",
-    header: ["Fecha", "Persona", "Puesto", "Entrada", "Salida", "Horas", "Turno previsto", "Estado", "Corregido", "Motivo de la corrección"],
+    header,
     rows: out,
-    widths: [12, 22, 16, 9, 11, 8, 26, 22, 10, 36],
+    widths: [12, 22, 16, 9, 11, 8, 26, 22, ...(withPlace ? [30] : []), 10, 36],
     hourColumns: [5],
-    highlight: (r, c) => (c === 7 ? statusColor(kinds[r]) : null),
+    highlight: (r, c) => {
+      if (c === 7) return statusColor(kinds[r]);
+      if (withPlace && c === 8 && String(out[r][8]).includes("Fuera")) return BAD;
+      return null;
+    },
   };
 }
 

@@ -4,7 +4,7 @@
  * error son idénticos en los dos sitios.
  */
 import { z } from "zod";
-import { spanHours } from "@/lib/schedule/rules";
+import { shiftHours, shiftSegments, spanHours } from "@/lib/schedule/rules";
 import { MAX_SLOTS } from "@/lib/schedule/types";
 
 export const timeField = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora no válida (usa HH:MM)");
@@ -18,6 +18,9 @@ export const shiftInput = z.object({
   label: z.string().trim().min(1, "Ponle nombre a cada franja").max(30, "El nombre de una franja puede tener 30 letras como mucho"),
   start: timeField,
   end: timeField,
+  /** Turno partido: segundo tramo (los dos o ninguno). */
+  start2: timeField.nullish(),
+  end2: timeField.nullish(),
   closing: z.boolean(),
 });
 export type ShiftInput = z.input<typeof shiftInput>;
@@ -36,9 +39,16 @@ export const necesidadesSchema = z
       const key = s.label.trim().toLowerCase();
       if (labels.has(key)) ctx.addIssue({ code: "custom", message: `Hay dos franjas que se llaman «${s.label.trim()}»` });
       labels.add(key);
-      const h = spanHours(s.start, s.end);
-      if (h < 0.5) ctx.addIssue({ code: "custom", message: `«${s.label}» tiene que durar al menos media hora` });
+      if (Boolean(s.start2) !== Boolean(s.end2)) ctx.addIssue({ code: "custom", message: `Completa el segundo tramo de «${s.label}»` });
+      const h = shiftHours(s.start, s.end, s.start2, s.end2);
+      if (spanHours(s.start, s.end) < 0.5 || (s.start2 && s.end2 && spanHours(s.start2, s.end2) < 0.5))
+        ctx.addIssue({ code: "custom", message: `Cada tramo de «${s.label}» tiene que durar al menos media hora` });
       if (h > 16) ctx.addIssue({ code: "custom", message: `«${s.label}» no puede durar más de 16 horas` });
+      if (s.start2 && s.end2) {
+        const [a, b] = shiftSegments(s);
+        if (b.start - a.end < 0.5) ctx.addIssue({ code: "custom", message: `En «${s.label}», el segundo tramo debe empezar después del primero` });
+        if (b.end - a.start > 24) ctx.addIssue({ code: "custom", message: `«${s.label}» no puede ocupar más de 24 horas` });
+      }
     }
   });
 export type NecesidadesInput = z.input<typeof necesidadesSchema>;
@@ -52,6 +62,8 @@ export const settingsSchema = z.object({
   maxExtraHours: z.number().int().min(0).max(20),
   clockIn: z.boolean(),
   clockMarginMinutes: z.number().int().min(0).max(60),
+  clockControl: z.enum(["no", "avisar", "bloquear"]).default("no"),
+  clockRadius: z.number().int().min(50).max(2000).default(200),
 });
 export type SettingsInput = z.input<typeof settingsSchema>;
 
@@ -71,6 +83,8 @@ export const employeeSchema = z.object({
   minDaysOff: z.number().int().min(0).max(6).nullable().optional(),
   maxConsecutiveClosings: z.number().int().min(1).max(7).nullable().optional(),
   preferredDaysOff: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+  /** Días en que puede fichar desde cualquier sitio (teletrabajo). */
+  remoteDays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
 });
 export type EmployeeInput = z.input<typeof employeeSchema>;
 

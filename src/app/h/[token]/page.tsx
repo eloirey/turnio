@@ -9,16 +9,25 @@ import { ui } from "@/components/ui";
 import { addDays, DAY_LONG, DAY_SHORT, dayOfMonth, longDateLabel, weekRangeLabel } from "@/lib/dates";
 import { getEmployeeView } from "@/lib/data/employee-view";
 import { ABSENCE_LABELS } from "@/lib/data/mappers";
+import { shiftTimes } from "@/lib/schedule/rules";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getBaseUrl } from "@/lib/url";
 import { ClockCard } from "./ClockCard";
 import { EmployeeAvisos } from "./EmployeeAvisos";
+import { EmployeePush } from "./EmployeePush";
+import { MyRecord } from "./MyRecord";
 import { RequestForm } from "./RequestForm";
 
-export const metadata: Metadata = {
-  title: "Mi horario · Rotafy",
-  robots: { index: false, follow: false }, // enlaces privados: que no salgan en Google
-};
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { token } = await params;
+  return {
+    title: "Mi horario · Rotafy",
+    robots: { index: false, follow: false }, // enlaces privados: que no salgan en Google
+    // Al instalarla en el móvil, el icono abre SU horario (no la portada).
+    manifest: `/h/${token}/manifest.webmanifest`,
+    appleWebApp: { capable: true, title: "Mi horario", statusBarStyle: "default" },
+  };
+}
 
 type Params = Promise<{ token: string }>;
 
@@ -37,7 +46,7 @@ async function EmployeeSchedule({ params }: { params: Params }) {
   const { me, team, weeks, shifts, today, localName, requests, roleNames, absenceOn, clockEnabled, clock } = view;
   // Una casilla con una franja que ya no existe se enseña como "Turno".
   const def = (c: string) => shifts[c] ?? { label: "Turno", start: "", end: "", hours: 0 };
-  const span = (c: string) => (shifts[c] ? `${shifts[c].start} – ${shifts[c].end}` : "Turno");
+  const span = (c: string) => (shifts[c] ? shiftTimes(shifts[c], " – ") : "Turno");
   const nameOf = new Map(team.map((t) => [t.id, t.nombre]));
   const icsUrl = `${baseUrl}/h/${token}/calendario.ics`;
   const webcalUrl = icsUrl.replace(/^https?:/, "webcal:");
@@ -76,8 +85,11 @@ async function EmployeeSchedule({ params }: { params: Params }) {
           now={new Date().toISOString()}
           today={today}
           todayShift={todayCode && todayCode !== "L" ? `${def(todayCode).label} · ${span(todayCode)}` : null}
+          place={view.clockPlace}
         />
       )}
+
+      <EmployeePush token={view.token} />
 
       {weeks.length === 0 && (
         <div className={`${ui.card} p-5 text-[15px] leading-relaxed text-ink-soft`}>
@@ -158,6 +170,8 @@ async function EmployeeSchedule({ params }: { params: Params }) {
           </div>
         </section>
       )}
+
+      {clockEnabled && <MyRecord token={view.token} today={today} />}
 
       {requests.length > 0 && (
         <section aria-label="Tus solicitudes" className={`${ui.card} p-5`}>

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { demandToRows } from "@/lib/data/mappers";
 import { requireLocal } from "@/lib/data/queries";
 import { firstError, necesidadesSchema, type NecesidadesInput } from "@/lib/forms";
-import { spanHours } from "@/lib/schedule/rules";
+import { shiftHours } from "@/lib/schedule/rules";
 import type { Demand } from "@/lib/schedule/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -27,7 +27,9 @@ export async function saveNecesidades(input: NecesidadesInput): Promise<SaveResu
       etiqueta: s.label,
       inicio: s.start,
       fin: s.end,
-      horas: spanHours(s.start, s.end),
+      inicio2: s.start2 || null,
+      fin2: s.end2 || null,
+      horas: shiftHours(s.start, s.end, s.start2, s.end2),
       cierre: s.closing,
     })),
   });

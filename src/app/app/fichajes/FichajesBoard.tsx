@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useToast } from "@/components/feedback";
 import { NavLink, useIsDemo } from "@/components/nav";
 import { WeekPicker } from "@/components/WeekPicker";
+import { shiftTimes } from "@/lib/schedule/rules";
 import { ExportChooser } from "@/components/ExportChooser";
 import { CLOCK_MODELS, clockTable, monthOption } from "@/lib/export-clock";
 import { saveBlob, tableCsv, tablesToXlsx } from "@/lib/export-table";
@@ -22,6 +23,8 @@ import {
   type ClockRecord,
   type DayStatus,
   type DayStatusKind,
+  placeFlag,
+  placeText,
 } from "@/lib/fichajes";
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import type { ShiftCatalog, ShiftDef } from "@/lib/schedule/types";
@@ -318,7 +321,7 @@ function DayCell({ c, disabled, onOpen }: { c: Cell; disabled: boolean; onOpen: 
   const first = c.records[0];
   const last = c.records[c.records.length - 1];
   const range = first ? `${madridTime(first.start)}–${last?.end ? madridTime(last.end) : last?.missingEnd ? "?" : "…"}` : "";
-  const planned = c.shift ? `${c.shift.label} ${c.shift.start}–${c.shift.end}` : "";
+  const planned = c.shift ? `${c.shift.label} ${shiftTimes(c.shift)}` : "";
   if (c.kind === "none") return <div className="flex h-[68px] items-center justify-center rounded-[10px] text-ink-muted/50">—</div>;
   return (
     <button
@@ -332,7 +335,7 @@ function DayCell({ c, disabled, onOpen }: { c: Cell; disabled: boolean; onOpen: 
       {c.future || c.kind === "pending" ? (
         <>
           <span className="truncate text-[13px] font-semibold">{c.shift?.label}</span>
-          <span className="text-xs tabular-nums">{c.shift ? `${c.shift.start}–${c.shift.end}` : ""}</span>
+          <span className="truncate text-xs tabular-nums">{c.shift ? shiftTimes(c.shift) : ""}</span>
         </>
       ) : (
         <>
@@ -345,11 +348,23 @@ function DayCell({ c, disabled, onOpen }: { c: Cell; disabled: boolean; onOpen: 
             )}
           </span>
           <span className="truncate text-xs text-ink-soft tabular-nums">{range || planned}</span>
-          {CHIP[c.kind] && (
-            <span className={`w-fit max-w-full truncate rounded px-1.5 text-[11px] font-semibold ${CHIP[c.kind]}`}>
-              {c.kind === "late" ? `Tarde +${c.lateMinutes}′` : c.kind === "early" ? `Antes −${c.earlyMinutes}′` : (SHORT[c.kind] ?? STATUS_LABEL[c.kind])}
-            </span>
-          )}
+          <span className="flex min-w-0 items-center gap-1">
+            {CHIP[c.kind] && (
+              <span className={`w-fit max-w-full truncate rounded px-1.5 text-[11px] font-semibold ${CHIP[c.kind]}`}>
+                {c.kind === "late" ? `Tarde +${c.lateMinutes}′` : c.kind === "early" ? `Antes −${c.earlyMinutes}′` : (SHORT[c.kind] ?? STATUS_LABEL[c.kind])}
+              </span>
+            )}
+            {placeFlag(c.records) === "fuera" && (
+              <span title="Fichó fuera del local" className="flex-none rounded bg-[#F8C9B8] px-1 text-[11px] font-semibold text-[#8A2A0A]">
+                {CHIP[c.kind] ? "📍" : "📍 Fuera"}
+              </span>
+            )}
+            {c.records.some((r) => r.placeIn === "teletrabajo") && (
+              <span title="Teletrabajo" className="flex-none text-[12px]">
+                🏠
+              </span>
+            )}
+          </span>
         </>
       )}
     </button>
@@ -367,6 +382,8 @@ interface Row {
   missingEnd: boolean;
   deleted: boolean;
   original?: { start: string; end: string };
+  /** Dónde fichó la entrada y la salida (si el local lo comprueba). */
+  where?: string;
 }
 
 const REASONS = ["Olvidó fichar la salida", "Olvidó fichar la entrada", "Error al fichar", "Fichó en papel", "Cambio de turno"];
@@ -387,7 +404,10 @@ function DayEditor(props: {
     c.records.map((r) => {
       const start = madridTime(r.start);
       const end = r.end ? madridTime(r.end) : "";
-      return { id: r.id, start, end, open: !r.end && !r.missingEnd, missingEnd: r.missingEnd, deleted: false, original: { start, end } };
+      const where = [r.placeIn ? `Entrada: ${placeText(r.placeIn, r.distIn).toLowerCase()}` : "", r.placeOut ? `Salida: ${placeText(r.placeOut, r.distOut).toLowerCase()}` : ""]
+        .filter(Boolean)
+        .join(" · ");
+      return { id: r.id, start, end, open: !r.end && !r.missingEnd, missingEnd: r.missingEnd, deleted: false, original: { start, end }, where };
     }),
   );
   const [reason, setReason] = useState(c.kind === "forgot" ? REASONS[0] : "");
@@ -433,7 +453,7 @@ function DayEditor(props: {
           <div>
             <h2 className={ui.h2}>{person.name}</h2>
             <p className="text-sm text-ink-muted">
-              {DAY_LONG[dayIndex]} {Number(c.date.slice(8))} · {c.shift ? `previsto ${c.shift.label} ${c.shift.start}–${c.shift.end}` : "sin turno previsto"}
+              {DAY_LONG[dayIndex]} {Number(c.date.slice(8))} · {c.shift ? `previsto ${c.shift.label} ${shiftTimes(c.shift)}` : "sin turno previsto"}
             </p>
           </div>
           <button aria-label="Cerrar" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-muted hover:bg-ground">
@@ -473,6 +493,9 @@ function DayEditor(props: {
                 >
                   ✕
                 </button>
+                {r.where && (
+                  <p className={`col-span-3 text-[12px] ${/fuera/.test(r.where) ? "font-semibold text-danger-ink" : "text-ink-muted"}`}>📍 {r.where}</p>
+                )}
               </div>
             ),
           )}

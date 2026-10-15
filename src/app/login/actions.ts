@@ -39,7 +39,14 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: translate(error.message), email };
-  redirect(await homePath(supabase));
+  const invite = inviteOf(formData);
+  redirect(invite ? `/invitacion/${invite}` : await homePath(supabase));
+}
+
+/** Si viene de una invitación de otro encargado, vuelve allí tras entrar. */
+function inviteOf(formData: FormData | null): string | null {
+  const v = String(formData?.get("invitacion") ?? "");
+  return /^[0-9a-f]{32}$/.test(v) ? v : null;
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -50,21 +57,22 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     ...parsed.data,
-    options: { emailRedirectTo: `${await getBaseUrl()}/auth/callback` },
+    options: { emailRedirectTo: `${await getBaseUrl()}/auth/callback${inviteOf(formData) ? `?next=/invitacion/${inviteOf(formData)}` : ""}` },
   });
   if (error) return { error: translate(error.message), email };
 
   // Si en Supabase está desactivada la confirmación por email, ya hay sesión.
-  if (data.session) redirect("/bienvenida");
+  if (data.session) redirect(inviteOf(formData) ? `/invitacion/${inviteOf(formData)}` : "/bienvenida");
   return { message: `Te hemos enviado un email a ${parsed.data.email}. Abre el enlace para activar tu cuenta.`, email };
 }
 
 /** Entrar (o registrarse) con Google. Supabase devuelve la URL de Google y volvemos a /auth/callback. */
-export async function signInWithGoogle(): Promise<AuthState> {
+export async function signInWithGoogle(formData?: FormData | null): Promise<AuthState> {
   const supabase = await createClient();
+  const invite = inviteOf(formData ?? null);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${await getBaseUrl()}/auth/callback?next=/app` },
+    options: { redirectTo: `${await getBaseUrl()}/auth/callback?next=${invite ? `/invitacion/${invite}` : "/app"}` },
   });
   if (error || !data.url) return { error: "No se ha podido conectar con Google. Inténtalo de nuevo." };
   redirect(data.url);

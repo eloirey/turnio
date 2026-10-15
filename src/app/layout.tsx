@@ -6,6 +6,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Rotafy — Cuadrantes de turnos sin Excel",
   description: "Genera el cuadrante semanal de tu equipo en segundos y avisa a todos con un enlace.",
+  // Se puede «instalar» en el móvil (y así recibir avisos también en iPhone).
+  appleWebApp: { capable: true, title: "Rotafy", statusBarStyle: "default" },
+  icons: { apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

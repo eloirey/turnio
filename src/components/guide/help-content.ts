@@ -86,6 +86,14 @@ export const HELP: Record<string, ScreenHelp> = {
         a: "No. Rotafy no es un servicio de archivo: la obligación de conservar el registro cuatro años es de tu empresa. Lo mantenemos mientras tengas la cuenta, pero descarga el Excel cada mes y guárdalo tú (o mándalo a tu gestoría).",
       },
       {
+        q: "¿Y si fichan desde casa?",
+        a: "En Ajustes → Fichaje elige «Avisarme si fichan fuera» o «Solo en el local» y guarda la ubicación del local (y, si quieres, su wifi). Al fichar se comprueba si está en el local; no se guarda la ubicación de nadie. Lo fichado fuera sale con «📍 Fuera» y te llega a la campanita. Quien teletrabaja se marca en su ficha de Equipo.",
+      },
+      {
+        q: "¿Mis empleados pueden ver lo que han fichado?",
+        a: "Sí, tienen derecho. En su enlace, «Mi registro de jornada» les enseña cada día del mes y pueden descargarlo en Excel o CSV.",
+      },
+      {
         q: "¿Puedo desactivar el fichaje?",
         a: "Sí, en Ajustes → Fichaje. Los fichajes que ya hay no se borran.",
       },
@@ -116,6 +124,14 @@ export const HELP: Record<string, ScreenHelp> = {
         a: "Es la página de esa persona: ve su horario, ficha y lo añade a su calendario, sin registrarse. Es único y no se debe compartir, porque con él se ficha a su nombre. Si lo pierde o se lo pasa a alguien, toca «cambia el enlace» y el anterior deja de funcionar.",
       },
       {
+        q: "Esta persona teletrabaja",
+        a: "En «Preferencias y reglas propias» marca «Teletrabajo» y elige sus días (o todos). Esos días puede fichar desde cualquier sitio y su fichaje sale como «Teletrabajo».",
+      },
+      {
+        q: "¿Cómo le llegan los avisos al móvil?",
+        a: "En su enlace tiene un botón «Activar avisos». En Android funciona directamente; en iPhone, Apple pide añadir antes la página a la pantalla de inicio (le salen las instrucciones).",
+      },
+      {
         q: "¿Qué pasa si elimino a alguien?",
         a: "Se quitan sus turnos futuros y su enlace deja de funcionar. Si alguna vez fichó, se archiva en lugar de borrarse, para que su registro de jornada siga en Fichajes.",
       },
@@ -132,6 +148,10 @@ export const HELP: Record<string, ScreenHelp> = {
       {
         q: "¿Puedo cambiar el nombre o el horario de las franjas?",
         a: "Sí, en la tarjeta de franjas: renómbralas como las llaméis («Partido», «Línea 12»…), cambia el horario, ordénalas o añade hasta 8.",
+      },
+      {
+        q: "¿Y los turnos partidos?",
+        a: "Marca «Turno partido» en la franja y pon el segundo tramo (por ejemplo, de 12:00 a 16:00 y de 20:00 a 00:00). Cuenta como un solo turno con las horas de los dos tramos; el descanso hasta el día siguiente se cuenta desde el final del segundo.",
       },
       {
         q: "¿Qué es una franja de cierre?",
@@ -162,6 +182,14 @@ export const HELP: Record<string, ScreenHelp> = {
       {
         q: "No puedo quitar un puesto",
         a: "Si alguien lo tiene asignado, primero cámbiale el puesto en Equipo.",
+      },
+      {
+        q: "¿Puede haber más de un encargado?",
+        a: "Sí. En «Encargados», pulsa «Invitar a otro encargado» y mándale el enlace. Entra con su propio email o con Google y podrá hacer todo lo mismo que tú, menos borrar la cuenta. Puedes quitarlo cuando quieras.",
+      },
+      {
+        q: "¿Qué es «¿Desde dónde se puede fichar?»?",
+        a: "Para que nadie fiche desde casa. Con «Avisarme» ficha igual pero te avisamos; con «Solo en el local» no le deja. Guarda la ubicación estando en el local (y su wifi si el GPS falla dentro).",
       },
       {
         q: "¿Cómo borro mi cuenta?",
