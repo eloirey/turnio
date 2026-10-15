@@ -9,13 +9,14 @@ import { acceptRequest, copyPreviousWeek, publishWeek, rejectRequest, saveWeek }
 
 export const metadata = { title: "Cuadrante · Rotafy" };
 
-type Search = Promise<{ semana?: string }>;
+type Search = Promise<{ semana?: string; dia?: string }>;
 
 async function Content({ searchParams }: { searchParams: Search }) {
   await connection();
-  const { semana } = await searchParams;
+  const { semana, dia } = await searchParams;
   const thisMonday = mondayOf(todayInMadrid());
   const monday = semana && isValidISODate(semana) ? mondayOf(semana) : thisMonday;
+  const focusDay = dia && isValidISODate(dia) && mondayOf(dia) === monday ? Math.round((Date.parse(dia) - Date.parse(monday)) / 86_400_000) : undefined;
 
   // Dos consultas en paralelo: el local (compartida con el layout) y la semana.
   const [bundle, week, baseUrl] = await Promise.all([requireLocal(), getWeekData(monday), getBaseUrl()]);
@@ -34,6 +35,7 @@ async function Content({ searchParams }: { searchParams: Search }) {
       shifts={shifts}
       rules={rules}
       monday={monday}
+      focusDay={focusDay}
       initialGrid={weekGrid(week, ids)}
       absences={weekAbsences(week, monday)}
       initialStatus={week.status}

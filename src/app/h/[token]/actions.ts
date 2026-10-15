@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { AVISO_COLUMNS, toAvisos, type Aviso, type AvisoRow } from "@/lib/avisos";
 import { getEmployeeByToken } from "@/lib/data/employee-view";
 import { tokenFromPath } from "@/lib/employee-link";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -105,4 +106,25 @@ export async function punchClock(token: string): Promise<PunchResult> {
   }
   revalidatePath(`/h/${token}`);
   return { ok: true, ...(data as { estado: "dentro" | "fuera"; desde?: string; hasta?: string; olvidado: boolean }) };
+}
+
+// ---------- Avisos del empleado ----------
+
+/** Los avisos de esta persona (solo los suyos: se filtra por su token). */
+export async function loadEmployeeAvisos(token: string): Promise<{ ok: true; items: Aviso[]; unread: number } | { ok: false }> {
+  const me = await getEmployeeByToken(token);
+  if (!me) return { ok: false };
+  const db = createAdminClient();
+  const { data, error } = await db.from("avisos").select(AVISO_COLUMNS).eq("empleado_id", me.id).order("creado_en", { ascending: false }).limit(20);
+  if (error) return { ok: false };
+  const items = toAvisos((data ?? []) as AvisoRow[]);
+  return { ok: true, items, unread: items.filter((a) => !a.leido).length };
+}
+
+export async function readEmployeeAvisos(token: string): Promise<{ ok: boolean }> {
+  const me = await getEmployeeByToken(token);
+  if (!me) return { ok: false };
+  const db = createAdminClient();
+  const { error } = await db.from("avisos").update({ leido_en: new Date().toISOString() }).eq("empleado_id", me.id).is("leido_en", null);
+  return { ok: !error };
 }

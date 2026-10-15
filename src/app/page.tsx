@@ -5,7 +5,7 @@ import { PALETTE } from "@/lib/roles";
 import { SECTOR_TEMPLATES } from "@/lib/schedule/templates";
 
 export const metadata = {
-  title: "Rotafy — Cuadrantes de turnos y fichaje para tu equipo",
+  title: "Rotafy — El cuadrante de turnos en 1 minuto, con fichaje incluido",
   description:
     "Genera el cuadrante semanal respetando disponibilidad, contratos y descansos, y lleva el registro de jornada desde el móvil. Cada empleado recibe su horario por WhatsApp. Sin instalar nada.",
 };
@@ -17,14 +17,18 @@ const PAINS = [
   ["“¿Cuál es el horario bueno?”", "Un enlace por persona, siempre al día"],
   ["Hojas de firmas para el fichaje", "Fichan desde el móvil y tú lo exportas"],
   ["El sábado falta alguien en barra", "Lo ves en rojo antes de publicar"],
+  ["Cambios que nadie se entera", "Avisa solo a quien le cambia el horario"],
+  ["Peticiones por WhatsApp a deshoras", "Solicitudes ordenadas y un aviso en la campanita"],
 ];
 
 const MORE = [
-  { icon: "plane", title: "Vacaciones y bajas", text: "Apúntalas y el generador no pondrá turnos esos días." },
+  { icon: "bell", title: "Avisos al momento", text: "Una campanita para ti y otra para cada empleado: solicitudes, horarios publicados, olvidos de fichaje." },
+  { icon: "send", title: "WhatsApp o Telegram", text: "Mandas a cada uno su horario con un toque, por la app que uséis. Si cambia, solo a quien le afecta." },
+  { icon: "sheet", title: "Exporta a Excel", text: "El cuadrante con colores, por día o en lista para la gestoría. Y los fichajes del mes." },
   { icon: "swap", title: "Cambios ordenados", text: "Quien quiere librar o cambiarse lo pide desde su enlace. Tú aceptas con un toque." },
+  { icon: "plane", title: "Vacaciones y bajas", text: "Apúntalas y el generador no pondrá turnos esos días." },
   { icon: "copy", title: "Copia la semana pasada", text: "Si tu horario se repite, empieza desde la anterior y retoca." },
-  { icon: "print", title: "Para el tablón", text: "Imprime el cuadrante en A4 apaisado, limpio y legible." },
-  { icon: "compass", title: "Guía paso a paso", text: "Te acompaña la primera vez y la abres cuando quieras." },
+  { icon: "compass", title: "Ayuda en cada pantalla", text: "Dudas resueltas donde estás y una guía paso a paso para empezar." },
   { icon: "lock", title: "Tus datos, en Europa", text: "Acceso cifrado y cada negocio solo ve lo suyo. Entra con email o con Google." },
 ] as const;
 
@@ -34,6 +38,7 @@ const FAQ = [
   ["¿Cumple la normativa laboral?", "Rotafy aplica los descansos entre jornadas, los días libres, los cierres seguidos y las horas extra que configures, también reglas distintas por persona. La responsabilidad final del cuadrante sigue siendo de la empresa."],
   ["¿Sirve como registro de jornada?", "Sí. Cada persona ficha entrada y salida desde su enlace; la hora la pone el servidor, no el móvil. Las correcciones quedan guardadas con su motivo y la hora original, y exportas cada mes en Excel para la gestoría o la Inspección."],
   ["¿Rotafy guarda los fichajes por mí?", "Los mantiene mientras tengas la cuenta, pero Rotafy no es un archivo: conservar el registro cuatro años es obligación de tu empresa. Descarga el Excel cada mes (un clic) y guárdalo tú o mándalo a tu gestoría."],
+  ["¿Cómo se enteran de los cambios de horario?", "Cuando vuelves a publicar, a quien le cambia algo le llega un aviso en su enlace y, si quieres, un mensaje por WhatsApp o Telegram que empieza con «Ha cambiado tu horario». Al resto no hace falta escribirles."],
   ["¿Qué pasa si un empleado comparte su enlace?", "El enlace es único para cada persona. Si lo pierde o lo comparte, lo cambias con un toque y el anterior deja de funcionar al momento."],
   ["¿Cuánto cuesta?", "Ahora mismo es gratis mientras dure el piloto, sin tarjeta. Si en el futuro pasa a ser de pago, te avisaremos antes y podrás decidir con calma."],
 ];
@@ -81,25 +86,25 @@ export default function Home() {
           <div className="relative mx-auto grid grid-cols-1 max-w-6xl items-center gap-14 px-5 pb-24 pt-14 lg:grid-cols-[1fr_1.05fr] lg:pt-20">
             <div>
               <a
-                href="#fichaje"
+                href="#mas"
                 className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-surface/80 py-1 pl-1 pr-3 text-[13px] font-medium text-accent-ink shadow-sm backdrop-blur hover:border-accent/40"
               >
                 <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">Nuevo</span>
-                Registro de jornada desde el móvil <span aria-hidden>→</span>
+                Avisos al momento y exportar a Excel <span aria-hidden>→</span>
               </a>
-              <h1 className="font-display text-[44px] font-bold leading-[1.0] tracking-[-0.03em] sm:text-[68px]">
-                Turnos y fichajes de tu equipo,{" "}
+              <h1 className="font-display text-[42px] font-bold leading-[1.08] tracking-[-0.03em] sm:text-[64px]">
+                El cuadrante de la semana en{" "}
                 <span className="relative whitespace-nowrap text-accent">
-                  sin Excel
-                  <svg aria-hidden viewBox="0 0 220 14" className="absolute -bottom-2 left-0 w-full text-accent/35" preserveAspectRatio="none">
+                  1 minuto
+                  <svg aria-hidden viewBox="0 0 220 14" className="absolute -bottom-1 left-0 h-3 w-full text-accent/35" preserveAspectRatio="none">
                     <path d="M2 10 C 60 2, 150 2, 218 9" stroke="currentColor" strokeWidth="5" fill="none" strokeLinecap="round" />
                   </svg>
                 </span>
-                .
+                . <span className="text-ink-muted/80">No en una tarde.</span>
               </h1>
               <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-soft sm:text-xl">
-                Rotafy hace el cuadrante de la semana respetando disponibilidad, contratos y descansos. Tu equipo lo recibe por WhatsApp y ficha desde el
-                móvil. Tú lo controlas todo desde un sitio.
+                Se acabaron el Excel, la foto del horario en el grupo y el «¿quién cierra el sábado?». Rotafy reparte los turnos cumpliendo descansos y
+                contratos, avisa a cada persona en su móvil y lleva el <strong className="font-semibold text-ink">registro de jornada que exige la ley</strong>.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="/login" className={`${ui.btn} ${ui.primary} h-[52px] px-7 text-base shadow-[0_10px_30px_-10px_rgba(31,92,70,0.7)]`}>
@@ -234,13 +239,13 @@ export default function Home() {
             <div>
               <SectionTitle kicker="Para tu equipo" title="Un enlace por persona. Nada que instalar." />
               <p className="mt-5 text-lg leading-relaxed text-ink-soft">
-                Al publicar, mandas a cada uno su horario por WhatsApp con un toque. En su enlace lo tiene siempre al día, ficha y pide cambios. Si quiere, sus
-                turnos aparecen solos en el calendario del móvil.
+                Al publicar, mandas a cada uno su horario por WhatsApp o Telegram con un toque. En su enlace lo tiene siempre al día, ficha, pide cambios y
+                recibe avisos. Si quiere, sus turnos aparecen solos en el calendario del móvil.
               </p>
               <ul className="mt-7 grid gap-3.5">
                 <Bullet>Único para cada persona: si se comparte, lo cambias y el anterior deja de funcionar.</Bullet>
                 <Bullet>Se suscribe una vez al calendario (iPhone, Google, Outlook) y se actualiza solo.</Bullet>
-                <Bullet>Pide librar o cambiarse con un compañero, sin mensajes por privado.</Bullet>
+                <Bullet>Pide librar o cambiarse con un compañero, sin mensajes por privado, y le avisa la campanita cuando respondes.</Bullet>
               </ul>
             </div>
             <WhatsAppPreview />
@@ -248,9 +253,9 @@ export default function Home() {
         </section>
 
         {/* ---------- Más ---------- */}
-        <section className="mx-auto max-w-6xl px-5 py-24">
+        <section id="mas" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-24">
           <SectionTitle kicker="Y además" title="Los detalles que ahorran discusiones" />
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {MORE.map((f) => (
               <div key={f.title} className="rounded-2xl border border-line bg-surface p-6">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
@@ -422,17 +427,24 @@ function PlayIcon() {
 function FeatureIcon({ name }: { name: (typeof MORE)[number]["icon"] }) {
   const paths: Record<typeof name, React.ReactNode> = {
     plane: <path d="M2.5 13.5l17-7-4 14-4.5-5.5-5.5-.5zM11 15l8.5-8.5" />,
+    bell: (
+      <>
+        <path d="M5.5 9a5.5 5.5 0 0111 0c0 4 1.6 5.6 2.3 6.2H3.2C3.9 14.6 5.5 13 5.5 9z" />
+        <path d="M9 18.5a2 2 0 004 0" />
+      </>
+    ),
+    send: <path d="M3 10.5l16-7-6 16-2.5-6.5L3 10.5zM10.5 13l8.5-9.5" />,
+    sheet: (
+      <>
+        <rect x="3.5" y="3.5" width="15" height="15" rx="2" />
+        <path d="M3.5 8.5h15M3.5 13.5h15M8.5 8.5v10" />
+      </>
+    ),
     swap: <path d="M4 8h14l-4-4M18 14H4l4 4" />,
     copy: (
       <>
         <rect x="7" y="7" width="12" height="12" rx="2" />
         <path d="M15 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2h2" />
-      </>
-    ),
-    print: (
-      <>
-        <path d="M6 9V3h10v6M6 16H4a1 1 0 01-1-1v-5a1 1 0 011-1h14a1 1 0 011 1v5a1 1 0 01-1 1h-2" />
-        <rect x="6" y="13" width="10" height="6" rx="1" />
       </>
     ),
     compass: (
@@ -469,6 +481,24 @@ function HeroPreview() {
   const tone = { ok: "bg-white/80 text-accent", late: "bg-pending-soft text-pending-ink", open: "bg-ok-soft text-accent" };
   return (
     <div className="relative" aria-label="Vista previa de Rotafy: cuadrante semanal con fichajes" role="img">
+      <div className="absolute -left-5 -top-8 z-10 hidden w-[260px] -rotate-2 rounded-2xl border border-line bg-surface p-3 shadow-[0_20px_40px_-18px_rgba(27,27,26,0.5)] sm:block">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#FFD9A8] text-[#7A3E00]">
+            <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9.5a6 6 0 0112 0c0 4.5 1.8 6.2 2.5 6.8H3.5c.7-.6 2.5-2.3 2.5-6.8z" />
+              <path d="M10 19.5a2.2 2.2 0 004 0" />
+            </svg>
+          </span>
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-muted">Solicitud · ahora</div>
+            <div className="text-[13px] font-semibold leading-snug">Laura pide librar el viernes 16</div>
+            <div className="mt-2 flex gap-1.5">
+              <span className="rounded-md bg-accent px-2.5 py-1 text-[11px] font-semibold text-white">Aceptar</span>
+              <span className="rounded-md border border-line-strong px-2.5 py-1 text-[11px] font-semibold">Rechazar</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="rounded-[28px] border border-line bg-surface/90 p-2 shadow-[0_40px_80px_-40px_rgba(27,27,26,0.45)] backdrop-blur">
         <div className="flex items-center gap-1.5 px-3 py-2">
           <span className="h-2.5 w-2.5 rounded-full bg-[#E4E1D8]" />

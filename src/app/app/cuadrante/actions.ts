@@ -2,18 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { gridToTurnos, type TurnoRow } from "@/lib/data/mappers";
+import { gridToTurnos, type Snapshot, type TurnoRow } from "@/lib/data/mappers";
 import { requireUser } from "@/lib/data/queries";
 import type { Grid } from "@/lib/schedule/types";
 import { createClient } from "@/lib/supabase/server";
 
 /*
- * Todas estas acciones solo comprueban la sesión (sin ir a la red) y hacen
- * UNA llamada a la base de datos. La seguridad la garantiza RLS: aunque
+ * Todas estas acciones solo comprueban la sesión (sin ir a la red) y van
+ * directas a la base de datos. La seguridad la garantiza RLS: aunque
  * alguien enviara el id de una semana ajena, la base de datos no la vería.
  */
 
 export type Result = { ok: true } | { ok: false; error: string };
+export type PublishResult = { ok: true; previous?: Snapshot | null } | { ok: false; error: string };
 export type TurnosResult = { ok: true; turnos: TurnoRow[] } | { ok: false; error: string };
 
 const uuid = z.uuid();
@@ -36,14 +37,19 @@ export async function saveWeek(weekId: string, grid: Grid): Promise<Result> {
   return { ok: true };
 }
 
-export async function publishWeek(weekId: string): Promise<Result> {
+/**
+ * Publica la semana. Devuelve lo que estaba publicado antes (si lo había)
+ * para que el aviso al equipo distinga a quién le ha cambiado el horario.
+ */
+export async function publishWeek(weekId: string): Promise<PublishResult> {
   await requireUser();
   if (!uuid.safeParse(weekId).success) return { ok: false, error: "Semana no válida." };
   const supabase = await createClient();
+  const { data: before } = await supabase.from("semanas").select("publicado").eq("id", weekId).maybeSingle();
   const { error } = await supabase.rpc("publicar_semana", { p_semana: weekId });
   if (error) return { ok: false, error: "No se ha podido publicar." };
   revalidatePath("/app/cuadrante");
-  return { ok: true };
+  return { ok: true, previous: (before?.publicado as Snapshot | null) ?? null };
 }
 
 export async function copyPreviousWeek(weekId: string): Promise<TurnosResult> {

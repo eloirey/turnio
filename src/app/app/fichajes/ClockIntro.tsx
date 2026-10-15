@@ -39,11 +39,11 @@ export function ClockIntro({ onActivate }: { onActivate?: () => Promise<void> | 
               Desde 2019 todas las empresas en España tienen que registrar la hora de entrada y salida de cada persona. Con Rotafy lo tienes junto al cuadrante.
             </p>
             {error && <p className={`${ui.error} mt-4`}>{error}</p>}
-            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-line-strong bg-ground p-3.5 text-[13px] leading-relaxed text-ink-soft">
+            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl bg-accent-soft p-3.5 text-[13px] leading-relaxed text-ink-soft">
               <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-[#1F5C46]" />
               <span>
-                Entiendo que <strong className="text-ink">conservar el registro 4 años es responsabilidad de mi empresa</strong>, no de Rotafy, y que debo
-                descargar el Excel cada mes y guardar mi copia.{" "}
+                <strong className="text-ink">Guardaré una copia del registro cada mes.</strong> La ley pide conservarlo 4 años y con Rotafy es un clic: lo
+                descargas en Excel desde aquí.{" "}
                 <a href="/legal/aviso-legal" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline underline-offset-2">
                   Condiciones
                 </a>

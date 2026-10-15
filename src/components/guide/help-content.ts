@@ -36,12 +36,16 @@ export const HELP: Record<string, ScreenHelp> = {
         a: "Es el fichaje real de esa persona ese día (solo si tienes el fichaje activado). «✓ 08:58–17:00» es que fichó a su hora; «Tarde +18′», que entró tarde; «● 08:58», que está trabajando ahora; «No fichó» o «Sin salida», que hay que revisarlo en Fichajes. El «⏱» de la columna Horas son las horas fichadas en la semana.",
       },
       {
+        q: "¿Cómo voy a otra semana o a un día concreto?",
+        a: "Con las flechas ‹ › vas de semana en semana. Para saltar más lejos, toca las fechas de arriba (por ejemplo «12 – 18 octubre») y elige el día en el calendario.",
+      },
+      {
         q: "¿Mi equipo ve los cambios mientras edito?",
         a: "No. Todo se guarda solo como borrador y tu equipo no ve nada hasta que pulsas «Publicar y avisar». Si cambias algo después de publicar, el botón pasa a «Publicar cambios».",
       },
       {
         q: "¿Qué pasa al publicar?",
-        a: "Cada persona ve su horario en su enlace personal y en su calendario, si se suscribió. Además se abre una lista para mandar a cada uno su horario por WhatsApp o Telegram con un toque.",
+        a: "Cada persona ve su horario en su enlace personal y en su calendario, si se suscribió, y le llega un aviso a su campanita. Además se abre una lista para mandar a cada uno su horario por WhatsApp o Telegram con un toque. Si vuelves a publicar con cambios, solo a quien le cambia algo le llega «Ha cambiado tu horario».",
       },
       {
         q: "¿Cómo copio la semana anterior, imprimo o exporto a Excel?",
@@ -49,7 +53,11 @@ export const HELP: Record<string, ScreenHelp> = {
       },
       {
         q: "Alguien ha pedido librar o un cambio",
-        a: "Las solicitudes aparecen en el panel de la derecha. Si la aceptas, el cuadrante se actualiza solo; acuérdate de publicar los cambios.",
+        a: "Te llega un aviso a la campanita (arriba) y la solicitud aparece arriba del todo en el panel de la derecha. Si la aceptas, el cuadrante se actualiza solo; acuérdate de publicar los cambios.",
+      },
+      {
+        q: "¿Para qué es la campanita?",
+        a: "Ahí te avisamos de lo importante: solicitudes de tu equipo, alguien que olvidó fichar la salida y novedades de Rotafy. El número rojo son los avisos sin leer.",
       },
     ],
   },
@@ -67,7 +75,7 @@ export const HELP: Record<string, ScreenHelp> = {
       },
       {
         q: "¿Qué significan los colores?",
-        a: "Verde: correcto. Amarillo: entró tarde o salió antes, por encima del margen que pusiste en Ajustes. Rojo: hay que revisarlo (no fichó o no fichó la salida).",
+        a: "Verde: correcto. Naranja: entró tarde o salió antes, por encima del margen que pusiste en Ajustes. Rojo: hay que revisarlo (no fichó o no fichó la salida). Para ir a otra semana, toca las fechas de arriba.",
       },
       {
         q: "¿Cómo saco el registro para la gestoría o la Inspección?",
@@ -89,7 +97,7 @@ export const HELP: Record<string, ScreenHelp> = {
     topics: [
       {
         q: "¿Cómo añado a alguien?",
-        a: "Pulsa «+ Añadir persona», pon su nombre, puesto y horas de contrato, y marca en la tabla cuándo puede trabajar. El móvil es opcional y sirve para mandarle el horario directamente.",
+        a: "Pulsa «+ Añadir persona», pon su nombre, puesto y horas de contrato, marca en la tabla cuándo puede trabajar y pulsa «Añadir al equipo» (el botón se queda fijo abajo mientras rellenas). El móvil es opcional y sirve para mandarle el horario directamente por WhatsApp.",
       },
       {
         q: "¿Qué es la tabla de disponibilidad?",

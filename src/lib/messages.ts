@@ -15,11 +15,16 @@ export interface ScheduleMessageOptions {
   row: Code[];
   shifts: ShiftCatalog;
   link: string;
+  /** El horario ya se había mandado y a esta persona le ha cambiado algo. */
+  changed?: boolean;
 }
+
+/** Al final de cada mensaje: si llega otro de la misma semana, es que hay cambios. */
+export const RESEND_NOTE = "Si te llega otro mensaje de esta misma semana, es que ha cambiado algo: revísalo.";
 
 /** Mensaje personal al publicar, con el enlace escrito dentro (WhatsApp, copiar). */
 export function personalScheduleMessage(opts: ScheduleMessageOptions): string {
-  return `${scheduleIntro(opts)}\n\nLo tienes siempre aquí: ${opts.link}\n(Es tu enlace personal: no lo compartas, con él se ficha a tu nombre.)`;
+  return `${scheduleIntro(opts)}\n\nLo tienes siempre aquí: ${opts.link}\n(Es tu enlace personal: no lo compartas, con él se ficha a tu nombre.)\n\n${RESEND_NOTE}`;
 }
 
 /**
@@ -27,13 +32,16 @@ export function personalScheduleMessage(opts: ScheduleMessageOptions): string {
  * (Telegram pone el enlace como vista previa, antes o después del texto).
  */
 export function personalScheduleMessageNoLink(opts: ScheduleMessageOptions): string {
-  return `${scheduleIntro(opts)}\n\nTu horario siempre al día está en el enlace de este mensaje. Es personal: no lo compartas, con él se ficha a tu nombre.`;
+  return `${scheduleIntro(opts)}\n\nTu horario siempre al día está en el enlace de este mensaje. Es personal: no lo compartas, con él se ficha a tu nombre.\n\n${RESEND_NOTE}`;
 }
 
 function scheduleIntro(opts: ScheduleMessageOptions): string {
   const lines = shiftLines(opts.row, opts.shifts, opts.monday);
   const body = lines.length ? lines.join("\n") : "Esta semana libras todos los días.";
-  return `Hola ${opts.name}, ya está tu horario de ${opts.localName} (${weekRangeLabel(opts.monday)}):\n\n${body}`;
+  const range = weekRangeLabel(opts.monday);
+  return opts.changed
+    ? `⚠️ Hola ${opts.name}, HA CAMBIADO tu horario de ${opts.localName} (${range}). Así queda ahora:\n\n${body}`
+    : `Hola ${opts.name}, ya está tu horario de ${opts.localName} (${range}):\n\n${body}`;
 }
 
 /** Mensaje para mandar el enlace personal desde la ficha de Equipo. */
@@ -45,6 +53,8 @@ export function personalLinkMessageNoLink(name: string, localName: string): stri
   return `Hola ${name}, en el enlace de este mensaje verás siempre tu horario de ${localName} y podrás fichar.\n\nEs tu enlace personal: no lo compartas con nadie, porque con él se ficha a tu nombre.`;
 }
 
-export function groupScheduleMessage(localName: string, monday: string): string {
-  return `Ya está publicado el horario de ${localName} para la semana del ${weekRangeLabel(monday)}. Cada uno lo tiene en su enlace personal de Rotafy.`;
+export function groupScheduleMessage(localName: string, monday: string, changed = false): string {
+  return changed
+    ? `⚠️ Hay cambios en el horario de ${localName} de la semana del ${weekRangeLabel(monday)}. Revisad vuestro enlace personal de Rotafy.`
+    : `Ya está publicado el horario de ${localName} para la semana del ${weekRangeLabel(monday)}. Cada uno lo tiene en su enlace personal de Rotafy.`;
 }

@@ -11,12 +11,13 @@ Cuadrantes de turnos para negocios con turnos en España (hostelería, tiendas, 
 | `/login` | Encargado | Crear cuenta y entrar con email y contraseña |
 | `/login`, `/recuperar`, `/nueva-contrasena` | Encargado | Entrar con email o Google, y recuperar la contraseña |
 | `/bienvenida` | Encargado | Crear el negocio desde una de las 17 plantillas por sector (puestos, franjas y necesidades) |
-| `/app/cuadrante` | Encargado | Generar, retocar (se autoguarda, con deshacer), copiar la semana anterior, publicar, avisar por WhatsApp, aceptar cambios, imprimir. Si el local ficha, debajo de cada turno se ve la hora real de entrada y salida |
+| `/app/cuadrante` | Encargado | Generar, retocar (se autoguarda, con deshacer), saltar a cualquier semana o día, copiar la semana anterior, publicar, avisar por WhatsApp o Telegram (al republicar, solo a quien le cambia algo), aceptar cambios, imprimir y exportar a Excel. Si el local ficha, debajo de cada turno se ve la hora real de entrada y salida |
 | `/app/fichajes` | Encargado | Registro de jornada: quién trabaja ahora, horas por persona y día, incidencias (olvidos, turnos sin fichar), correcciones con motivo e historial, exportar el mes a Excel |
 | `/app/empleados` | Encargado | Equipo, horas de contrato, disponibilidad, preferencias y reglas propias, ausencias y enlace personal |
 | `/app/necesidades` | Encargado | Cuánta gente hace falta por franja y puesto, y las franjas (nombre libre, horario, orden, cierres) |
 | `/app/ajustes` | Encargado | Nombre, reglas (descanso, días libres, cierres seguidos, horas extra), fichaje, puestos y borrar la cuenta |
-| `/h/<nombre>-<token>` | Empleado | Su horario, fichar entrada y salida, pedir cambios y suscribirse al calendario, sin registrarse |
+| Campanita (cabecera) | Encargado y empleado | Avisos: solicitudes, respuestas, horario publicado o cambiado, olvidos y correcciones de fichaje, y anuncios de Rotafy |
+| `/h/<nombre>-<token>` | Empleado | Su horario, fichar entrada y salida, avisos, pedir cambios y suscribirse al calendario, sin registrarse |
 | `/h/<nombre>-<token>/calendario.ics` | Empleado | Calendario `.ics` que se actualiza solo (iPhone, Google, Outlook) |
 | `/legal/*` | Todos | Privacidad y aviso legal |
 
@@ -38,6 +39,7 @@ npm install
    1. `20261014000000_init.sql`
    2. `20261015000000_v2.sql` (puestos, ausencias, reglas y funciones de carga rápida).
    3. `20261016000000_v3.sql` (franjas con nombre libre, reglas por persona, horas extra y fichajes).
+   4. `20261017000000_v4.sql` (avisos: la campanita del encargado y de cada empleado).
 
    Se pueden ejecutar sobre una base que ya tiene datos: los conservan.
 3. En **Authentication → Sign In / Providers → Email**, mientras desarrollas puedes desactivar *Confirm email* para entrar sin confirmar el correo.
@@ -133,10 +135,26 @@ psql -d rotafy_test -f supabase/tests/00_stub_supabase.sql
 psql -d rotafy_test -f supabase/migrations/20261014000000_init.sql
 psql -d rotafy_test -f supabase/migrations/20261015000000_v2.sql
 psql -d rotafy_test -f supabase/migrations/20261016000000_v3.sql
+psql -d rotafy_test -f supabase/migrations/20261017000000_v4.sql
 psql -d rotafy_test -f supabase/tests/10_rls_y_funciones.sql   # debe terminar en "TODAS LAS PRUEBAS ... PASAN"
 psql -d rotafy_test -f supabase/tests/20_v2.sql
 psql -d rotafy_test -f supabase/tests/30_v3.sql                # "TODAS LAS PRUEBAS DE v3 PASAN"
+psql -d rotafy_test -f supabase/tests/40_v4.sql                # "TODAS LAS PRUEBAS DE v4 PASAN"
 ```
+
+## Mandar un anuncio a todos (la campanita)
+
+En **SQL Editor** de Supabase:
+
+```sql
+select public.publicar_anuncio(
+  'Novedad: exporta el cuadrante a Excel',   -- título
+  'Lo tienes en Cuadrante → Más.',            -- texto (opcional)
+  'encargados',                               -- 'encargados', 'empleados' o 'todos'
+  '/app/cuadrante'                            -- enlace (opcional)
+);
+```
+Solo se puede llamar desde el editor SQL: ningún usuario de la app puede mandar anuncios.
 
 ## Hoja de ruta
 

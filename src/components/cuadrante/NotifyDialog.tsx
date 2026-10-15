@@ -23,6 +23,8 @@ interface Props {
   baseUrl: string;
   localName: string;
   gaps: number;
+  /** Al volver a publicar: a quién le ha cambiado el horario (null = primera vez). */
+  changed?: Set<string> | null;
   onClose: () => void;
 }
 
@@ -31,7 +33,7 @@ interface Props {
  * horario y su enlace ya escritos (o lo copia, para cualquier otra app).
  * El encargado solo pulsa "enviar" en cada chat.
  */
-export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, gaps, onClose }: Props) {
+export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, gaps, changed = null, onClose }: Props) {
   const [sent, setSent] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<string | null>(null);
   const [channel, setChannel] = useState<Channel>(() => savedChannel());
@@ -52,6 +54,8 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
     }
   }
   const isDemo = useIsDemo();
+  // Al volver a publicar, primero quien tiene cambios.
+  const ordered = changed ? [...employees.filter((e) => changed.has(e.id)), ...employees.filter((e) => !changed.has(e.id))] : employees;
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const onCloseRef = useRef(onClose);
@@ -77,8 +81,15 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
         <div className="flex items-start justify-between gap-3 border-b border-line p-5">
           <div>
             <h2 id="notify-title" className={ui.h2}>
-              Publicado. Ahora avisa al equipo
+              {changed ? "Publicado. Avisa de los cambios" : "Publicado. Ahora avisa al equipo"}
             </h2>
+            {changed && (
+              <p className="mt-1 text-sm font-semibold text-pending-ink">
+                {changed.size === 0
+                  ? "A nadie le ha cambiado el horario: no hace falta volver a escribirles."
+                  : `Ha cambiado el horario de ${changed.size} ${changed.size === 1 ? "persona" : "personas"}: su mensaje empieza con «Ha cambiado tu horario». Al resto no hace falta escribirles.`}
+              </p>
+            )}
             <p className="mt-1 text-sm text-ink-soft">
               {isDemo
                 ? "En la app real, cada botón abre WhatsApp o Telegram con el horario de esa persona ya escrito. En la demo te enseñamos el mensaje."
@@ -97,8 +108,9 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
                     role="radio"
                     aria-checked={channel === c.key}
                     onClick={() => pickChannel(c.key)}
-                    className={`min-h-9 rounded-lg px-3 font-semibold transition ${channel === c.key ? "bg-surface text-ink shadow-sm" : "text-ink-muted hover:text-ink"}`}
+                    className={`flex min-h-9 items-center gap-1.5 rounded-lg px-3 font-semibold transition ${channel === c.key ? "bg-surface text-ink shadow-sm" : "text-ink-muted hover:text-ink"}`}
                   >
+                    {c.key !== "copy" && <span aria-hidden className={`h-2 w-2 rounded-full ${c.key === "whatsapp" ? "bg-[#128C4B]" : "bg-[#2481CC]"}`} />}
                     {c.label}
                   </button>
                 ))}
@@ -116,18 +128,25 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
         </div>
 
         <ul className="flex-1 overflow-y-auto p-3">
-          {employees.map((e) => {
+          {ordered.map((e, i) => {
             const link = `${baseUrl}/h/${employeePath(e.name, e.token)}`;
-            const opts = { name: e.name, localName, monday, row: e.row, shifts, link };
+            const hasChanges = changed ? changed.has(e.id) : false;
+            const opts = { name: e.name, localName, monday, row: e.row, shifts, link, changed: hasChanges };
+            const firstUnchanged = changed && !hasChanges && (i === 0 || changed.has(ordered[i - 1].id));
             const msg = personalScheduleMessage(opts);
             const href = shareHref(channel, { full: msg, noLink: personalScheduleMessageNoLink(opts), link, phone: e.phone });
             const lines = shiftLines(e.row, shifts, monday);
             const isSent = sent.has(e.id);
+            const sendCls = isSent || (changed && !hasChanges) ? ui.secondary : channel === "whatsapp" ? ui.whatsapp : channel === "telegram" ? ui.telegram : ui.primary;
             return (
               <li key={e.id} className="rounded-xl p-3 hover:bg-ground">
+                {firstUnchanged && <div className="-mx-3 -mt-3 mb-3 border-t border-line px-3 pt-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Sin cambios</div>}
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-semibold">{e.name}</div>
+                    <div className="flex items-center gap-2 font-semibold">
+                      {e.name}
+                      {hasChanges && <span className="rounded-full bg-pending-soft px-2 py-0.5 text-[11px] font-semibold text-pending-ink">Ha cambiado</span>}
+                    </div>
                     <div className="truncate text-xs text-ink-muted">
                       {lines.length ? `${lines.length} turno${lines.length > 1 ? "s" : ""}` : "Libra toda la semana"}
                       {!e.phone && !isDemo && channel === "whatsapp" && " · sin teléfono: elegirás el chat en WhatsApp"}
@@ -149,12 +168,12 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setSent((s) => new Set(s).add(e.id))}
-                      className={`${ui.btnSm} flex-none ${isSent ? ui.secondary : ui.primary}`}
+                      className={`${ui.btnSm} flex-none ${sendCls}`}
                     >
                       {isSent ? "Enviado ✓" : "Enviar"}
                     </a>
                   ) : (
-                    <button onClick={() => copy(e.id, msg)} className={`${ui.btnSm} flex-none ${isSent ? ui.secondary : ui.primary}`}>
+                    <button onClick={() => copy(e.id, msg)} className={`${ui.btnSm} flex-none ${sendCls}`}>
                       {copied === e.id ? "Copiado ✓" : isSent ? "Copiar otra vez" : "Copiar"}
                     </button>
                   )}
@@ -172,7 +191,7 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
             <span className="text-sm text-ink-muted">En la demo no se envía nada.</span>
           ) : (
             (() => {
-              const group = groupScheduleMessage(localName, monday);
+              const group = groupScheduleMessage(localName, monday, Boolean(changed));
               const groupHref = shareHref(channel, { full: group });
               return groupHref ? (
                 <a href={groupHref} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-accent underline">

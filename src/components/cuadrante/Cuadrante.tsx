@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfirm, useToast } from "@/components/feedback";
 import { NavLink } from "@/components/nav";
 import { ui } from "@/components/ui";
-import { ABSENCE_LABELS, rowsToGrid, type AbsenceReason, type TurnoRow } from "@/lib/data/mappers";
+import { ABSENCE_LABELS, rowsToGrid, snapshotToGrid, type AbsenceReason, type Snapshot, type TurnoRow } from "@/lib/data/mappers";
 import { addDays, DAY_LONG, DAY_SHORT, dayOfMonth, isoWeekNumber, weekRangeLabel } from "@/lib/dates";
 import { dayStatus, formatHours, groupByEmployeeDay, madridTime, recordHours, type ClockRecord, type DayStatus } from "@/lib/fichajes";
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
@@ -12,6 +12,7 @@ import { emptyGrid, findGaps, findIssues, generateSchedule, hoursByEmployee } fr
 import { activeSlots, FREE, type AbsenceMap, type Code, type Demand, type Employee, type Grid, type IssueKind, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
 import { emitCuadranteEvent } from "@/components/guide/GuidePanel";
 import { ExportDialog } from "./ExportDialog";
+import { WeekPicker } from "@/components/WeekPicker";
 import { NotifyDialog, type NotifyEmployee } from "./NotifyDialog";
 
 export type WeekStatus = "borrador" | "publicado" | "cambios";
@@ -35,7 +36,8 @@ export interface CuadranteRequest {
 /** Funciones del servidor. Sin ellas (la demo) todo funciona solo en memoria. */
 export interface Persistence {
   save: (grid: Grid) => Promise<Result>;
-  publish: () => Promise<Result>;
+  /** Devuelve lo publicado antes (si lo había) para saber a quién le cambia el horario. */
+  publish: () => Promise<{ ok: true; previous?: Snapshot | null } | { ok: false; error: string }>;
   acceptRequest: (id: string) => Promise<TurnosResult>;
   rejectRequest: (id: string) => Promise<Result>;
   copyPrevious?: () => Promise<TurnosResult>;
@@ -60,6 +62,8 @@ interface Props {
   clock?: { records: ClockRecord[]; now: string; marginMinutes: number; today: string };
   /** Se llama tras generar o publicar (la demo lo usa para avanzar el tutorial). */
   onEvent?: (event: "generated" | "published" | "edited") => void;
+  /** Día (0-6) elegido en el calendario: se resalta y se lleva a la vista. */
+  focusDay?: number;
 }
 
 interface Selection {
@@ -95,6 +99,13 @@ export function Cuadrante(props: Props) {
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [publishedNow, setPublishedNow] = useState(false);
+  // Si se eligió un día en el calendario, se lleva su columna a la vista (en el móvil hay scroll lateral).
+  useEffect(() => {
+    if (props.focusDay === undefined) return;
+    document.querySelector(`[data-day="${props.focusDay}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [props.focusDay]);
+  /** Tras volver a publicar: quién tiene cambios (null = primera publicación). */
+  const [changed, setChanged] = useState<Set<string> | null>(null);
   const toast = useToast(6000);
   const [exportOpen, setExportOpen] = useState(false);
   const { confirm, view: confirmView } = useConfirm();
@@ -251,6 +262,12 @@ export function Cuadrante(props: Props) {
         }
         const res = await persistence.publish();
         if (!res.ok) return toast.show({ message: res.error, tone: "error" });
+        // Si ya estaba publicada, se avisa de «ha cambiado» solo a quien le cambia algo.
+        if (res.previous) {
+          const before = snapshotToGrid(ids, res.previous);
+          const now = latestGrid.current;
+          setChanged(new Set(ids.filter((id) => (before[id] ?? []).join() !== (now[id] ?? []).join())));
+        } else setChanged(null);
       }
       setStatus("publicado");
       setPublishedNow(true);
@@ -337,6 +354,43 @@ export function Cuadrante(props: Props) {
 
   const showFirstSteps = onboarding && !onboarding.anyPublished && !publishedNow;
 
+  // Las solicitudes pendientes van arriba del todo del panel para que no pasen desapercibidas.
+  const requestsCard = persistence ? (
+    <div id="solicitudes" className={`scroll-mt-24 rounded-2xl p-5 ${requests.length ? "border-2 border-[#F3C58C] bg-[#FFF8EE]" : ui.card}`}>
+              <h2 className={`${ui.h2} mb-3 flex items-center gap-2`}>
+                Solicitudes de cambio
+                {requests.length > 0 && <span className="rounded-full bg-[#E08A00] px-2 py-0.5 text-[13px] font-bold text-white">{requests.length}</span>}
+              </h2>
+              {requests.length === 0 ? (
+                <p className="text-sm text-ink-muted">Nadie ha pedido cambios esta semana.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {requests.map((r) => {
+                    const who = byId.get(r.empleadoId)?.name ?? "Alguien";
+                    const day = `el ${DAY_LONG[r.dia]} ${dayOfMonth(monday, r.dia)}`;
+                    const what = r.tipo === "librar" ? `pide librar ${day}.` : `quiere cambiarse ${day} con ${byId.get(r.conEmpleadoId ?? "")?.name ?? "un compañero"}.`;
+                    return (
+                      <div key={r.id} className="border-t border-[#EEEBE3] pt-3.5 text-sm leading-snug first:border-0 first:pt-0">
+                        <div>
+                          <strong>{who}</strong> {what}
+                        </div>
+                        {r.mensaje && <p className="mt-1 text-ink-soft">“{r.mensaje}”</p>}
+                        <div className="mt-2.5 flex gap-2">
+                          <button onClick={() => accept(r)} disabled={busy} className={`${ui.btnSm} ${ui.primary}`}>
+                            Aceptar
+                          </button>
+                          <button onClick={() => reject(r)} disabled={busy} className={`${ui.btnSm} ${ui.secondary}`}>
+                            Rechazar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+  ) : null;
+
   return (
     <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8 print:max-w-none print:p-0">
       {/* ---------- Cabecera ---------- */}
@@ -345,6 +399,15 @@ export function Cuadrante(props: Props) {
           <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
             <span className="text-[13px] font-medium uppercase tracking-[0.08em] text-ink-muted">Semana {isoWeekNumber(monday)}</span>
             <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-semibold print:hidden ${STATUS_CHIP[status].cls}`}>{STATUS_CHIP[status].label}</span>
+            {requests.length > 0 && (
+              <button
+                type="button"
+                onClick={() => document.getElementById("solicitudes")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="rounded-full bg-[#FFD9A8] px-2.5 py-0.5 text-[13px] font-semibold text-[#7A3E00] hover:bg-[#FFCB8A] print:hidden"
+              >
+                {requests.length === 1 ? "1 solicitud pendiente" : `${requests.length} solicitudes pendientes`} ↓
+              </button>
+            )}
             {persistence && (
               <span className="text-[13px] text-ink-muted print:hidden" aria-live="polite">
                 {saveState === "saving" && "Guardando…"}
@@ -364,7 +427,7 @@ export function Cuadrante(props: Props) {
                 <span className="sr-only">Semana anterior</span>
               </NavLink>
             )}
-            <h1 className="font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">{weekRangeLabel(monday)}</h1>
+            {nav ? <WeekPicker monday={monday} base={nav.today} /> : <h1 className="font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">{weekRangeLabel(monday)}</h1>}
             {nav && (
               <NavLink href={nav.next} className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] border border-line-strong bg-surface text-lg hover:border-ink print:hidden">
                 <span aria-hidden>›</span>
@@ -462,11 +525,11 @@ export function Cuadrante(props: Props) {
             <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-ground px-3 py-2 text-[12.5px] text-ink-soft print:hidden" aria-label="Leyenda de fichajes">
               <span className="font-semibold text-ink">Debajo de cada turno, el fichaje real:</span>
               <LegendChip cls="bg-white text-accent" text="✓ 08:58–17:00" label="a su hora" />
-              <LegendChip cls="bg-pending-soft text-pending-ink" text="Tarde +18′" label="retraso" />
+              <LegendChip cls="bg-[#FFD9A8] text-[#7A3E00]" text="Tarde +18′" label="retraso" />
               <LegendChip cls="bg-ok-soft text-accent" text="● 08:58" label="trabajando ahora" />
-              <LegendChip cls="bg-danger-soft text-danger-ink" text="No fichó" label="o «Sin salida»: revisar" />
+              <LegendChip cls="bg-[#F8C9B8] text-[#8A2A0A]" text="No fichó" label="o «Sin salida»: revisar" />
               <span>
-                <strong className="font-semibold text-ink">⏱</strong> en Horas = horas fichadas
+                <strong className="font-semibold text-ink">⏱</strong> = horas fichadas
               </span>
             </div>
           )}
@@ -476,7 +539,7 @@ export function Cuadrante(props: Props) {
               <div className={`${COLS} pb-1 text-[13px] font-semibold text-ink-muted`}>
                 <div className="sticky left-0 z-10 bg-surface">Persona</div>
                 {DAY_SHORT.map((d, i) => (
-                  <div key={d} className={i >= 5 ? "text-ink-soft" : ""}>
+                  <div key={d} data-day={i} className={props.focusDay === i ? "-mx-1 rounded-md bg-ink px-1 text-white" : i >= 5 ? "text-ink-soft" : ""}>
                     {d} <span className="font-normal">{dayOfMonth(monday, i)}</span>
                   </div>
                 ))}
@@ -549,6 +612,7 @@ export function Cuadrante(props: Props) {
 
         {/* ---------- Panel lateral ---------- */}
         <aside className="flex w-full flex-col gap-4 lg:w-auto lg:flex-[1_1_300px] print:hidden">
+          {requests.length > 0 && requestsCard}
           <div className={`${ui.card} p-5`}>
             <h2 className={`${ui.h2} mb-3`}>
               {warningCount === 0 ? "Todo en orden" : warningCount === 1 ? "1 cosa por revisar" : `${warningCount} cosas por revisar`}
@@ -595,38 +659,7 @@ export function Cuadrante(props: Props) {
             )}
           </div>
 
-          {persistence && (
-            <div className={`${ui.card} p-5`}>
-              <h2 className={`${ui.h2} mb-3`}>Solicitudes de cambio</h2>
-              {requests.length === 0 ? (
-                <p className="text-sm text-ink-muted">Nadie ha pedido cambios esta semana.</p>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {requests.map((r) => {
-                    const who = byId.get(r.empleadoId)?.name ?? "Alguien";
-                    const day = `el ${DAY_LONG[r.dia]} ${dayOfMonth(monday, r.dia)}`;
-                    const what = r.tipo === "librar" ? `pide librar ${day}.` : `quiere cambiarse ${day} con ${byId.get(r.conEmpleadoId ?? "")?.name ?? "un compañero"}.`;
-                    return (
-                      <div key={r.id} className="border-t border-[#EEEBE3] pt-3.5 text-sm leading-snug first:border-0 first:pt-0">
-                        <div>
-                          <strong>{who}</strong> {what}
-                        </div>
-                        {r.mensaje && <p className="mt-1 text-ink-soft">“{r.mensaje}”</p>}
-                        <div className="mt-2.5 flex gap-2">
-                          <button onClick={() => accept(r)} disabled={busy} className={`${ui.btnSm} ${ui.primary}`}>
-                            Aceptar
-                          </button>
-                          <button onClick={() => reject(r)} disabled={busy} className={`${ui.btnSm} ${ui.secondary}`}>
-                            Rechazar
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+          {requests.length === 0 && requestsCard}
         </aside>
       </div>
 
@@ -652,6 +685,7 @@ export function Cuadrante(props: Props) {
           baseUrl={notify.baseUrl}
           localName={notify.localName}
           gaps={totalGaps}
+          changed={changed}
           onClose={() => setNotifyOpen(false)}
         />
       )}
@@ -676,11 +710,11 @@ function ClockLine({ status }: { status: DayStatus & { records: ClockRecord[] } 
   // Texto corto para que quepa en la casilla; el detalle completo va en el título.
   const map: Record<string, { text: string; cls: string; title: string }> = {
     ok: { text: `✓ ${span}`, cls: "bg-white/70 text-accent", title: `Fichó ${span}` },
-    late: { text: `Tarde +${status.lateMinutes}′`, cls: "bg-pending-soft text-pending-ink", title: `Fichó ${span}: entró ${status.lateMinutes} min tarde` },
-    early: { text: `Antes −${status.earlyMinutes}′`, cls: "bg-pending-soft text-pending-ink", title: `Fichó ${span}: salió ${status.earlyMinutes} min antes` },
+    late: { text: `Tarde +${status.lateMinutes}′`, cls: "bg-[#FFD9A8] text-[#7A3E00]", title: `Fichó ${span}: entró ${status.lateMinutes} min tarde` },
+    early: { text: `Antes −${status.earlyMinutes}′`, cls: "bg-[#FFD9A8] text-[#7A3E00]", title: `Fichó ${span}: salió ${status.earlyMinutes} min antes` },
     open: { text: `● ${first ? madridTime(first.start) : ""}`, cls: "bg-ok-soft text-accent", title: `Trabajando desde las ${first ? madridTime(first.start) : ""}` },
-    forgot: { text: "Sin salida", cls: "bg-danger-soft text-danger-ink", title: "Olvidó fichar la salida" },
-    missing: { text: "No fichó", cls: "bg-danger-soft text-danger-ink", title: "Tenía turno y no fichó" },
+    forgot: { text: "Sin salida", cls: "bg-[#F8C9B8] text-[#8A2A0A]", title: "Olvidó fichar la salida" },
+    missing: { text: "No fichó", cls: "bg-[#F8C9B8] text-[#8A2A0A]", title: "Tenía turno y no fichó" },
     unplanned: { text: `Fichó ${first ? madridTime(first.start) : ""}`, cls: "bg-pending-soft text-pending-ink", title: `Fichó ${span} sin turno previsto` },
   };
   const m = map[status.kind];
