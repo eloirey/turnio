@@ -66,6 +66,13 @@ export default function PrivacidadPage() {
           <strong>Supabase</strong> (base de datos y autenticación), con los datos alojados en la Unión Europea.
         </li>
         <li>
+          <strong>Resend</strong> (envío de los correos de la cuenta: confirmar el email, restablecer la contraseña y la bienvenida), desde su región de la
+          Unión Europea.
+        </li>
+        <li>
+          <strong>ImprovMX</strong> (reenvío del correo que nos escribes a {"hola@rotafy.es"}).
+        </li>
+        <li>
           <strong>[PROVEEDOR DE HOSTING, p. ej. Netlify]</strong> (alojamiento de la web). Puede procesar datos en Estados Unidos, amparado en las cláusulas
           contractuales tipo de la Comisión Europea y/o el Marco de Privacidad de Datos UE-EE. UU.
         </li>

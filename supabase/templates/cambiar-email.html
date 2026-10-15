@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Confirma tu nuevo email</title>
+<style>
+  @media (max-width: 600px) {
+    .card { padding: 28px 22px !important; }
+    .h1 { font-size: 24px !important; }
+    .btn { width: 100% !important; }
+    .btn a { display: block !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#F4F3EE;-webkit-text-size-adjust:100%;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Confirma el cambio de email de tu cuenta.&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F3EE;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+        <tr>
+          <td style="padding:0 4px 24px;">
+            <a href="https://rotafy.es" style="text-decoration:none;"><img src="https://rotafy.es/email/logo.png" width="134" height="38" alt="rotafy" style="display:block;border:0;outline:none;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:24px;font-weight:700;color:#1B1B1A;"></a>
+          </td>
+        </tr>
+        <tr>
+          <td class="card" style="background:#FFFFFF;border:1px solid #E6E3DA;border-radius:16px;padding:40px 40px 36px;">
+            <h1 class="h1" style="margin:0 0 16px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:28px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:#1B1B1A;">Confirma tu nuevo email</h1>
+            <p style="margin:0 0 0px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;color:#4A4843;">Has pedido cambiar el email de tu cuenta de Rotafy de <strong style="color:#1B1B1A;">{{ .Email }}</strong> a <strong style="color:#1B1B1A;">{{ .NewEmail }}</strong>. Confírmalo para que el cambio se haga.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn" style="margin:28px 0 0;">
+              <tr>
+                <td align="center" style="border-radius:10px;background:#1F5C46;">
+                  <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:15px 30px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:10px;">Confirmar el cambio</a>
+                </td>
+              </tr>
+            </table>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;">
+              <tr><td style="border-top:1px solid #E6E3DA;padding-top:20px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:13px;line-height:1.6;color:#6B6860;">El enlace caduca en 1 hora y solo sirve una vez. Si no has pedido este cambio, ignora este correo y escríbenos.<br><br>¿El botón no funciona? Copia y pega este enlace en tu navegador:<br><a href="{{ .ConfirmationURL }}" style="color:#1F5C46;word-break:break-all;">{{ .ConfirmationURL }}</a></td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:28px 16px 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:12px;line-height:1.7;color:#6B6860;">
+            Recibes este correo por un cambio de email en tu cuenta de Rotafy.<br>
+            ¿Dudas? Escríbenos a <a href="mailto:hola@rotafy.es" style="color:#6B6860;">hola@rotafy.es</a><br>
+            <a href="https://rotafy.es" style="color:#6B6860;text-decoration:none;"><strong>Rotafy</strong></a> · Cuadrantes de turnos y registro de jornada
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

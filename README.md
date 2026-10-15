@@ -48,6 +48,24 @@ npm install
 4. En **Authentication → URL Configuration**, pon `http://localhost:3000` como *Site URL* y añade `http://localhost:3000/auth/callback` a *Redirect URLs* (en producción, también `https://rotafy.es/auth/callback`).
 5. **Emails** (confirmar cuenta y recuperar contraseña): el servicio de email que trae Supabase solo envía a los miembros de tu equipo de Supabase y 2 por hora. Para clientes reales configura un SMTP propio en **Authentication → Emails → SMTP Settings** (por ejemplo, Resend).
 
+#### Correos con tu dominio (recomendado)
+Los correos de la cuenta (confirmar email, restablecer contraseña) los manda Supabase. Su servicio de serie solo envía a tu equipo y 2 por hora, así que para clientes reales:
+
+1. En [resend.com](https://resend.com) añade el dominio (región Irlanda) y pon sus registros DNS en DonDominio. **No** actives «Receiving»: el correo entrante (`hola@rotafy.es`) lo reenvía ImprovMX.
+2. Crea una API key con permiso *Sending access* y, en Supabase → **Authentication → Emails → SMTP Settings**, activa *Custom SMTP*: remitente `no-reply@rotafy.es` / `Rotafy`, host `smtp.resend.com`, puerto `465`, usuario `resend`, contraseña la API key.
+3. En **Authentication → Emails → Templates** pega las plantillas de `supabase/templates/` (abre el `.html`, copia todo y pégalo en *Source*):
+
+   | Plantilla de Supabase | Archivo | Asunto |
+   |---|---|---|
+   | Confirm signup | `confirmar-cuenta.html` | Confirma tu email y empieza con Rotafy |
+   | Reset password | `restablecer-contrasena.html` | Restablece tu contraseña de Rotafy |
+   | Change email address | `cambiar-email.html` | Confirma tu nuevo email en Rotafy |
+
+   Se generan desde `src/lib/email/templates.ts`; si cambias el diseño, `npx vitest run -u` las regenera.
+4. Para el correo de **bienvenida** (lo manda la app al crear el negocio), crea otra API key igual y ponla como `RESEND_API_KEY` en `.env.local` y en Netlify. Sin ella, simplemente no se manda.
+
+El logo de los correos se carga de `https://rotafy.es/email/logo.png`: hasta que la web esté publicada, en su lugar se verá el texto «rotafy».
+
 #### Entrar con Google (opcional)
 1. En [Google Cloud Console](https://console.cloud.google.com/) crea un proyecto → **APIs y servicios → Pantalla de consentimiento** (tipo *Externo*) → **Credenciales → Crear credenciales → ID de cliente OAuth** (*Aplicación web*).
 2. En *URIs de redirección autorizados* pon la que te enseña Supabase en **Authentication → Sign In / Providers → Google** (`https://<tu-proyecto>.supabase.co/auth/v1/callback`).
@@ -111,6 +129,7 @@ src/
     nav.tsx                  Enlaces que en la demo cambian de pestaña en vez de navegar
   lib/
     push.ts  clock-place.ts  Avisos en el móvil y comprobación del lugar al fichar
+    email/                   Diseño de los correos (plantillas de Supabase + bienvenida) y envío con Resend
     schedule/                Lógica pura: generador, reglas, validador (+ tests)
     data/
       mappers.ts             Filas de la BD ⇄ tipos del dominio (+ tests)
