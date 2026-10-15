@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ui } from "@/components/ui";
+import { Portal } from "@/components/Portal";
 
 export type FileFormat = "xlsx" | "csv";
 
@@ -77,6 +78,7 @@ export function ExportChooser<K extends string>({ title, subtitle, before, model
   }
 
   return (
+    <Portal>
     <div className="anim-overlay fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-0 backdrop-blur-[2px] sm:items-center sm:p-4 print:hidden" role="dialog" aria-modal="true" aria-labelledby="export-title">
       <div className="absolute inset-0" onClick={onClose} />
       <div ref={dialogRef} className="anim-sheet relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-2xl sm:rounded-3xl">
@@ -160,6 +162,7 @@ export function ExportChooser<K extends string>({ title, subtitle, before, model
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

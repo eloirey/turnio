@@ -16,6 +16,7 @@ import { WeekPicker } from "@/components/WeekPicker";
 import { NotifyDialog, type NotifyEmployee } from "./NotifyDialog";
 import { CellEditor, type Selection } from "./CellEditor";
 import { PrintSchedule } from "./PrintSchedule";
+import { refreshAvisos } from "@/lib/avisos";
 
 export type WeekStatus = "borrador" | "publicado" | "cambios";
 type Result = { ok: true } | { ok: false; error: string };
@@ -294,6 +295,7 @@ export function Cuadrante(props: Props) {
     latestGrid.current = next;
     setStatus((s) => (s === "borrador" ? "borrador" : "cambios"));
     setRequests((rs) => rs.filter((x) => x.id !== r.id));
+    refreshAvisos();
     toast.show("Cambio aplicado. Publica para que lo vea el equipo.");
   }
 
@@ -302,6 +304,7 @@ export function Cuadrante(props: Props) {
     const res = await persistence.rejectRequest(r.id);
     if (!res.ok) return toast.show({ message: res.error, tone: "error" });
     setRequests((rs) => rs.filter((x) => x.id !== r.id));
+    refreshAvisos();
     toast.show(`Solicitud rechazada. Díselo a ${byId.get(r.empleadoId)?.name ?? "la persona"}.`);
   }
 

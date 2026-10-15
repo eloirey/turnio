@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ui } from "./ui";
+import { Portal } from "./Portal";
 
 // ---------- Avisos breves (toasts), con acción opcional ("Deshacer") ----------
 
@@ -28,6 +29,7 @@ export function useToast(duration = 5000) {
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
 
   const view = toast ? (
+    <Portal>
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4 print:hidden">
       <div
         role="status"
@@ -47,6 +49,7 @@ export function useToast(duration = 5000) {
         )}
       </div>
     </div>
+    </Portal>
   ) : null;
 
   return { show, hide, view };
@@ -87,6 +90,7 @@ export function useConfirm() {
   }, [state, close]);
 
   const view = state ? (
+    <Portal>
     <div className="anim-overlay fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-6" onClick={() => close(false)}>
       <div
         role="alertdialog"
@@ -113,6 +117,7 @@ export function useConfirm() {
         </div>
       </div>
     </div>
+    </Portal>
   ) : null;
 
   return { confirm, view };

@@ -37,6 +37,8 @@ export interface DemoState {
   seq: number;
   /** Solicitudes pendientes del equipo (la demo trae una para probar). */
   requests: DemoRequest[];
+  /** Cómo se resolvió cada solicitud (para el aviso de la campanita). */
+  outcomes?: Record<string, string>;
 }
 
 export interface DemoRequest {
