@@ -15,6 +15,7 @@ import * as serverActions from "./actions";
 export interface EmployeeActions {
   saveEmployee: typeof serverActions.saveEmployee;
   deleteEmployee: typeof serverActions.deleteEmployee;
+  newLink: typeof serverActions.newLink;
   addAbsence: typeof serverActions.addAbsence;
   deleteAbsence: typeof serverActions.deleteAbsence;
 }
@@ -143,6 +144,21 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
       toast.show(res.archived ? `${draft.nombre} ya no está en el equipo. Sus fichajes se conservan.` : `${draft.nombre} ya no está en el equipo.`);
       const rest = employees.filter((e) => e.id !== draft.id);
       setDraft(rest[0] ? toDraft(rest[0], slots) : newDraft(roles, slots));
+    });
+  }
+
+  async function changeLink() {
+    if (!current) return;
+    const ok = await confirm({
+      title: `¿Cambiar el enlace de ${current.name}?`,
+      body: "El enlace actual dejará de funcionar al momento. Úsalo si lo ha perdido o si lo ha compartido con alguien. Después envíale el nuevo.",
+      confirmLabel: "Cambiar enlace",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const res = await actions.newLink(current.id);
+      if (!res.ok) return setError(res.error);
+      toast.show("Enlace nuevo creado. Envíaselo a " + current.name + ".");
     });
   }
 
@@ -393,8 +409,13 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
             <>
               <AbsencesCard employee={current} absences={myAbsences} today={today} onToast={toast.show} confirm={confirm} actions={actions} />
 
-              <div className={`${ui.card} p-6`}>
-                <h2 className={ui.h2}>Enlace personal</h2>
+              <div className={`${ui.card} p-6`} data-tour="enlace">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className={ui.h2}>Enlace personal</h2>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-pending-soft px-2.5 py-1 text-[12px] font-semibold text-pending-ink">
+                    <span aria-hidden>🔒</span> Solo para {current.name}
+                  </span>
+                </div>
                 <p className="mb-3 mt-1 text-sm text-ink-soft">
                   {current.name} verá siempre su horario aquí, sin registrarse, podrá fichar y añadirlo a su calendario del móvil. Envíaselo una vez.
                   {isDemo && " (En la demo este enlace no funciona.)"}
@@ -405,7 +426,10 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                     Copiar
                   </button>
                   <a
-                    href={whatsappLink(`Hola ${current.name}, aquí verás siempre tu horario de ${localName}: ${personalLink}`, current.phone)}
+                    href={whatsappLink(
+                      `Hola ${current.name}, aquí verás siempre tu horario de ${localName} y podrás fichar: ${personalLink}\n\nEs tu enlace personal: no lo compartas con nadie, porque con él se ficha a tu nombre.`,
+                      current.phone,
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${ui.btnSm} ${ui.primary}`}
@@ -413,6 +437,13 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                     Enviar por WhatsApp
                   </a>
                 </div>
+                <p className="mt-3 rounded-lg bg-ground px-3 py-2.5 text-[13px] leading-relaxed text-ink-soft">
+                  <strong className="text-ink">Es único y no se debe compartir:</strong> quien lo tenga puede ver el horario de {current.name} y fichar a su nombre. Si lo pierde o se lo pasa a alguien,{" "}
+                  <button onClick={changeLink} disabled={pending} className="font-semibold text-accent underline underline-offset-2 hover:text-accent-ink disabled:opacity-50">
+                    cambia el enlace
+                  </button>{" "}
+                  y el anterior dejará de funcionar.
+                </p>
               </div>
             </>
           )}

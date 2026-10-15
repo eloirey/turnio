@@ -96,6 +96,21 @@ export async function deleteEmployee(id: string): Promise<ActionResult> {
   return { ok: true, id };
 }
 
+/**
+ * Cambia el enlace personal de una persona (si lo ha perdido o compartido).
+ * El enlace anterior deja de funcionar al momento.
+ */
+export async function newLink(id: string): Promise<ActionResult> {
+  const { local } = await requireLocal();
+  if (!z.uuid().safeParse(id).success) return { ok: false, error: "Persona no válida." };
+  const supabase = await createClient();
+  const token = crypto.randomUUID().replaceAll("-", "");
+  const { data, error } = await supabase.from("empleados").update({ token_acceso: token }).eq("id", id).eq("local_id", local.id).select("id").single();
+  if (error || !data) return { ok: false, error: "No se ha podido cambiar el enlace." };
+  revalidatePath("/app", "layout");
+  return { ok: true, id };
+}
+
 const absenceSchema = z
   .object({
     empleadoId: z.uuid(),

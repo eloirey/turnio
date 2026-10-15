@@ -16,6 +16,9 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             <Link href="/legal/aviso-legal" className="hover:text-ink">
               Aviso legal
             </Link>
+            <Link href="/legal/cookies" className="hover:text-ink">
+              Cookies
+            </Link>
           </nav>
         </div>
       </header>

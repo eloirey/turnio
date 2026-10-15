@@ -248,10 +248,13 @@ export function FichajesBoard(props: Props) {
               ))}
             </ul>
           )}
-          <p className="mt-4 border-t border-[#EEEBE3] pt-4 text-[13px] leading-relaxed text-ink-muted">
-            Cada corrección queda guardada con su motivo y la hora original. La ley obliga a conservar este registro cuatro años y a enseñarlo si lo
-            pide la persona, sus representantes o la Inspección de Trabajo.
-          </p>
+          <p className="mt-4 border-t border-[#EEEBE3] pt-4 text-[13px] leading-relaxed text-ink-muted">Cada corrección queda guardada con su motivo y la hora original.</p>
+          <div className="mt-3 rounded-xl bg-accent-soft p-4 text-[13px] leading-relaxed text-accent-ink">
+            <strong className="mb-1 block text-sm">Guarda una copia cada mes</strong>
+            La ley obliga a tu empresa a conservar el registro de jornada <strong>4 años</strong> y a enseñarlo si lo piden la persona, sus representantes o
+            la Inspección de Trabajo. Rotafy lo guarda mientras tengas la cuenta, pero si la borras se borra con ella. A principio de cada mes, pulsa
+            «Exportar a Excel» y guarda el archivo (o mándalo a tu gestoría).
+          </div>
         </aside>
       </div>
 
@@ -518,7 +521,7 @@ function ExportMenu({ monday, today, exportClock, onError }: { monday: string; t
   const months = useMemo(() => {
     const list: string[] = [];
     const [y, m] = (monday > today ? today : monday).split("-").map(Number);
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < 12; k++) {
       const d = new Date(Date.UTC(y, m - 1 - k, 1));
       list.push(d.toISOString().slice(0, 7));
     }
@@ -553,7 +556,7 @@ function ExportMenu({ monday, today, exportClock, onError }: { monday: string; t
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div role="menu" className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
+          <div role="menu" className="absolute right-0 z-40 mt-2 max-h-[min(420px,70vh)] w-64 overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-lg">
             <div className="px-4 py-2 text-xs text-ink-muted">Registro de jornada del mes, listo para la gestoría</div>
             {months.map((m) => (
               <button key={m} role="menuitem" onClick={() => download(m)} className="block w-full px-4 py-2.5 text-left text-[15px] capitalize hover:bg-ground">

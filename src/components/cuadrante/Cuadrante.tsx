@@ -10,6 +10,7 @@ import { dayStatus, formatHours, groupByEmployeeDay, madridTime, recordHours, ty
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import { emptyGrid, findGaps, findIssues, generateSchedule, hoursByEmployee } from "@/lib/schedule";
 import { activeSlots, FREE, type AbsenceMap, type Code, type Demand, type Employee, type Grid, type IssueKind, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
+import { emitCuadranteEvent } from "@/components/guide/GuidePanel";
 import { NotifyDialog, type NotifyEmployee } from "./NotifyDialog";
 
 export type WeekStatus = "borrador" | "publicado" | "cambios";
@@ -184,6 +185,7 @@ export function Cuadrante(props: Props) {
     commit({ ...grid, [id]: grid[id].map((c, d) => (d === day ? code : c)) });
     setSel(null);
     onEvent?.("edited");
+    emitCuadranteEvent("edited");
   }
 
   function openCell(id: string, day: number, el: HTMLElement) {
@@ -202,6 +204,7 @@ export function Cuadrante(props: Props) {
     setMenuOpen(false);
     commitWithUndo(generateSchedule(employees, demand, shifts, rules, absences), "Cuadrante generado con las reglas, necesidades y ausencias de esta semana.");
     onEvent?.("generated");
+    emitCuadranteEvent("generated");
   }
 
   async function clearWeek() {
@@ -250,6 +253,7 @@ export function Cuadrante(props: Props) {
       setStatus("publicado");
       setPublishedNow(true);
       onEvent?.("published");
+      emitCuadranteEvent("published");
       if (notify) setNotifyOpen(true);
       else toast.show(`Publicado: ${employees.length} personas recibirían su horario.${totalGaps ? ` Quedan ${totalGaps} huecos.` : ""}`);
     } finally {
@@ -442,6 +446,19 @@ export function Cuadrante(props: Props) {
             </div>
             <span className="text-[13px] text-ink-muted">Toca una casilla para cambiarla</span>
           </div>
+
+          {clock && (
+            <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-ground px-3 py-2 text-[12.5px] text-ink-soft print:hidden" aria-label="Leyenda de fichajes">
+              <span className="font-semibold text-ink">Debajo de cada turno, el fichaje real:</span>
+              <LegendChip cls="bg-white text-accent" text="✓ 08:58–17:00" label="a su hora" />
+              <LegendChip cls="bg-pending-soft text-pending-ink" text="Tarde +18′" label="retraso" />
+              <LegendChip cls="bg-ok-soft text-accent" text="● 08:58" label="trabajando ahora" />
+              <LegendChip cls="bg-danger-soft text-danger-ink" text="No fichó" label="o «Sin salida»: revisar" />
+              <span>
+                <strong className="font-semibold text-ink">⏱</strong> en Horas = horas fichadas
+              </span>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <div className="flex min-w-[880px] flex-col gap-1.5 p-1 sm:min-w-[1010px]">
@@ -653,6 +670,15 @@ function ClockLine({ status }: { status: DayStatus & { records: ClockRecord[] } 
   return (
     <span title={m.title} className={`mt-1 inline-flex w-fit max-w-full truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${m.cls}`}>
       {m.text}
+    </span>
+  );
+}
+
+function LegendChip({ cls, text, label }: { cls: string; text: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${cls}`}>{text}</span>
+      {label}
     </span>
   );
 }

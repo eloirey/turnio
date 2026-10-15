@@ -2,70 +2,65 @@ import Link from "next/link";
 import { Logo, LogoMark } from "@/components/Logo";
 import { ui } from "@/components/ui";
 import { PALETTE } from "@/lib/roles";
+import { SECTOR_TEMPLATES } from "@/lib/schedule/templates";
 
 export const metadata = {
-  title: "Rotafy — El cuadrante de turnos de tu equipo, en un minuto",
+  title: "Rotafy — Cuadrantes de turnos y fichaje para tu equipo",
   description:
-    "Genera el cuadrante semanal respetando disponibilidad, contratos y descansos legales. Cada empleado recibe su horario por WhatsApp y en su calendario.",
+    "Genera el cuadrante semanal respetando disponibilidad, contratos y descansos, y lleva el registro de jornada desde el móvil. Cada empleado recibe su horario por WhatsApp. Sin instalar nada.",
 };
 
-const FEATURES = [
-  { title: "Se genera solo", text: "Reparte los turnos según lo que necesitas cada día, la disponibilidad y las horas de contrato. Tú solo retocas." },
-  { title: "Cumple los descansos", text: "Avisa si alguien descansa menos de 12 horas entre jornadas, libra menos días de los que toca o encadena demasiados cierres." },
-  { title: "Fichaje desde el móvil", text: "Cada persona ficha entrada y salida desde su enlace. Tú ves las horas reales, corriges olvidos y exportas el mes para la gestoría." },
-  { title: "Avisos por WhatsApp", text: "Al publicar, mandas a cada persona su horario con un toque. Sin fotos del Excel perdidas en el grupo." },
-  { title: "A tu medida", text: "Franjas con el nombre que quieras («Línea 12», «Partido»…), puestos propios y reglas distintas para quien las necesite." },
-  { title: "En su calendario", text: "Cada empleado se suscribe una vez y sus turnos aparecen solos en el móvil, también cuando cambian." },
-  { title: "Cambios ordenados", text: "Quien necesita librar o cambiarse con un compañero lo pide en la app. Tú lo aceptas con un toque." },
-  { title: "Vacaciones y bajas", text: "Apunta las ausencias y el generador no asignará turnos esos días." },
-  { title: "Plantillas por sector", text: "Hostelería, comercio, residencias, limpieza, transporte… Empiezas con puestos, franjas y necesidades típicas." },
-];
+const SECTORS = SECTOR_TEMPLATES.filter((t) => t.key !== "otro");
 
 const PAINS = [
   ["Una tarde entera con el Excel", "Un cuadrante listo en segundos"],
   ["“¿Cuál es el horario bueno?”", "Un enlace por persona, siempre al día"],
-  ["Cambios pactados por privado", "Se piden en la app y tú decides"],
+  ["Hojas de firmas para el fichaje", "Fichan desde el móvil y tú lo exportas"],
   ["El sábado falta alguien en barra", "Lo ves en rojo antes de publicar"],
 ];
 
-const SECTORS = [
-  "Bares y restaurantes",
-  "Cafeterías y panaderías",
-  "Hoteles",
-  "Tiendas y supermercados",
-  "Residencias",
-  "Clínicas y farmacias",
-  "Gimnasios",
-  "Peluquerías",
-  "Limpieza",
-  "Seguridad",
-  "Almacenes",
-  "Transporte",
-  "Atención al cliente",
-  "Cines y ocio",
-];
+const MORE = [
+  { icon: "plane", title: "Vacaciones y bajas", text: "Apúntalas y el generador no pondrá turnos esos días." },
+  { icon: "swap", title: "Cambios ordenados", text: "Quien quiere librar o cambiarse lo pide desde su enlace. Tú aceptas con un toque." },
+  { icon: "copy", title: "Copia la semana pasada", text: "Si tu horario se repite, empieza desde la anterior y retoca." },
+  { icon: "print", title: "Para el tablón", text: "Imprime el cuadrante en A4 apaisado, limpio y legible." },
+  { icon: "compass", title: "Guía paso a paso", text: "Te acompaña la primera vez y la abres cuando quieras." },
+  { icon: "lock", title: "Tus datos, en Europa", text: "Acceso cifrado y cada negocio solo ve lo suyo. Entra con email o con Google." },
+] as const;
 
 const FAQ = [
-  ["¿Mis empleados tienen que instalar algo?", "No. Cada persona recibe un enlace personal que se abre en el navegador del móvil. Si quiere, lo añade a su calendario."],
-  ["¿Sirve para mi tipo de negocio?", "Sí, si tu equipo trabaja por turnos. Tú defines los puestos (sala, caja, auxiliares…), las franjas horarias y cuánta gente necesitas cada día."],
-  ["¿Cumple la normativa laboral?", "Rotafy te avisa de los descansos mínimos entre jornadas, los días libres y las horas de contrato según las reglas que configures. La responsabilidad final del cuadrante sigue siendo de la empresa."],
-  ["¿También sirve para fichar?", "Sí. Si lo activas, cada persona ficha la entrada y la salida desde su enlace, sin instalar nada. La hora la pone Rotafy, no el móvil, y cada corrección queda guardada con su motivo. Puedes exportar el registro del mes en Excel."],
-  ["¿Dónde se guardan los datos?", "En servidores de la Unión Europea, con acceso cifrado. Cada negocio solo puede ver sus propios datos."],
+  ["¿Mis empleados tienen que instalar algo?", "No. Cada persona recibe un enlace personal que se abre en el navegador del móvil. Ahí ve su horario, ficha y, si quiere, lo añade a su calendario."],
+  ["¿Sirve para mi tipo de negocio?", "Sí, si tu equipo trabaja por turnos. Empiezas con una plantilla de tu sector y luego cambias puestos, franjas (con el nombre y horario que quieras) y cuánta gente necesitas cada día."],
+  ["¿Cumple la normativa laboral?", "Rotafy aplica los descansos entre jornadas, los días libres, los cierres seguidos y las horas extra que configures, también reglas distintas por persona. La responsabilidad final del cuadrante sigue siendo de la empresa."],
+  ["¿Sirve como registro de jornada?", "Sí. Cada persona ficha entrada y salida desde su enlace; la hora la pone el servidor, no el móvil. Las correcciones quedan guardadas con su motivo y la hora original, y exportas cada mes en Excel para la gestoría o la Inspección."],
+  ["¿Cuánto tiempo se guardan los fichajes?", "Mientras tengas la cuenta. Como la ley pide conservarlos cuatro años, te recomendamos descargar el Excel cada mes y guardarlo tú también."],
+  ["¿Qué pasa si un empleado comparte su enlace?", "El enlace es único para cada persona. Si lo pierde o lo comparte, lo cambias con un toque y el anterior deja de funcionar al momento."],
   ["¿Cuánto cuesta?", "Ahora mismo es gratis mientras dure el piloto, sin tarjeta. Si en el futuro pasa a ser de pago, te avisaremos antes y podrás decidir con calma."],
 ];
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-ground text-ink">
-      <header className="sticky top-0 z-30 border-b border-line/70 bg-ground/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <div className="min-h-screen overflow-x-clip bg-ground text-ink">
+      <header className="sticky top-0 z-30 border-b border-line/60 bg-ground/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
           <Link href="/" aria-label="Rotafy">
             <Logo size="sm" />
           </Link>
+          <nav className="hidden items-center gap-1 text-sm font-medium text-ink-soft md:flex">
+            <a href="#cuadrante" className="rounded-lg px-3 py-2 hover:text-ink">
+              Cuadrante
+            </a>
+            <a href="#fichaje" className="rounded-lg px-3 py-2 hover:text-ink">
+              Fichaje
+            </a>
+            <a href="#sectores" className="rounded-lg px-3 py-2 hover:text-ink">
+              Sectores
+            </a>
+            <a href="#preguntas" className="rounded-lg px-3 py-2 hover:text-ink">
+              Preguntas
+            </a>
+          </nav>
           <nav className="flex items-center gap-1 text-sm">
-            <Link href="/demo" className="hidden min-h-11 items-center rounded-lg px-3 font-medium text-ink-soft hover:text-ink sm:flex">
-              Ver demo
-            </Link>
             <Link href="/login" className="flex min-h-11 items-center rounded-lg px-3 font-medium text-ink-soft hover:text-ink">
               Entrar
             </Link>
@@ -78,108 +73,268 @@ export default function Home() {
 
       <main>
         {/* ---------- Hero ---------- */}
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-12 lg:grid-cols-[1.05fr_1fr] lg:pt-20">
-          <div>
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-[13px] font-semibold text-accent-ink">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Gratis durante el piloto
-            </p>
-            <h1 className="font-display text-[44px] font-bold leading-[1.02] tracking-tight sm:text-[64px]">
-              El cuadrante de la semana, hecho en un minuto.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-              Rotafy reparte los turnos de tu equipo respetando disponibilidad, contratos y descansos, te avisa de lo que falla y manda a cada persona su
-              horario por WhatsApp.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/login" className={`${ui.btn} ${ui.primary} h-12 px-6 text-base`}>
-                Crear mi cuadrante gratis
-              </Link>
-              <Link href="/demo" className={`${ui.btn} ${ui.secondary} h-12 px-6 text-base`}>
-                Probar la demo
-              </Link>
-            </div>
-            <p className="mt-5 text-sm text-ink-muted">Sin tarjeta · Tu equipo no instala nada · Datos en Europa</p>
+        <section className="relative">
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-0 overflow-hidden">
+            <div className="absolute -top-40 left-1/2 h-[560px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(31,92,70,0.16),transparent)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(27,27,26,0.045)_1px,transparent_1px),linear-gradient(to_bottom,rgba(27,27,26,0.045)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]" />
           </div>
-          <ProductPreview />
+          <div className="relative mx-auto grid grid-cols-1 max-w-6xl items-center gap-14 px-5 pb-24 pt-14 lg:grid-cols-[1fr_1.05fr] lg:pt-20">
+            <div>
+              <a
+                href="#fichaje"
+                className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-surface/80 py-1 pl-1 pr-3 text-[13px] font-medium text-accent-ink shadow-sm backdrop-blur hover:border-accent/40"
+              >
+                <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">Nuevo</span>
+                Registro de jornada desde el móvil <span aria-hidden>→</span>
+              </a>
+              <h1 className="font-display text-[44px] font-bold leading-[1.0] tracking-[-0.03em] sm:text-[68px]">
+                Turnos y fichajes de tu equipo,{" "}
+                <span className="relative whitespace-nowrap text-accent">
+                  sin Excel
+                  <svg aria-hidden viewBox="0 0 220 14" className="absolute -bottom-2 left-0 w-full text-accent/35" preserveAspectRatio="none">
+                    <path d="M2 10 C 60 2, 150 2, 218 9" stroke="currentColor" strokeWidth="5" fill="none" strokeLinecap="round" />
+                  </svg>
+                </span>
+                .
+              </h1>
+              <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-soft sm:text-xl">
+                Rotafy hace el cuadrante de la semana respetando disponibilidad, contratos y descansos. Tu equipo lo recibe por WhatsApp y ficha desde el
+                móvil. Tú lo controlas todo desde un sitio.
+              </p>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <Link href="/login" className={`${ui.btn} ${ui.primary} h-[52px] px-7 text-base shadow-[0_10px_30px_-10px_rgba(31,92,70,0.7)]`}>
+                  Crear mi cuadrante gratis
+                </Link>
+                <Link href="/demo" className={`${ui.btn} ${ui.secondary} h-[52px] px-7 text-base`}>
+                  <PlayIcon /> Probar la demo guiada
+                </Link>
+              </div>
+              <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-soft">
+                {["Sin tarjeta", "Tu equipo no instala nada", "Datos en Europa"].map((t) => (
+                  <li key={t} className="flex items-center gap-1.5">
+                    <CheckIcon /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <HeroPreview />
+          </div>
+        </section>
+
+        {/* ---------- Cifras ---------- */}
+        <section className="border-y border-line bg-surface">
+          <dl className="mx-auto grid max-w-6xl grid-cols-2 divide-line px-5 md:grid-cols-4 md:divide-x">
+            {[
+              ["< 1 min", "para generar la semana"],
+              [String(SECTORS.length), "plantillas por sector"],
+              ["0 apps", "que instalar en el equipo"],
+              ["1 clic", "para el Excel de fichajes"],
+            ].map(([n, l]) => (
+              <div key={l} className="px-2 py-7 md:px-8">
+                <dt className="sr-only">{l}</dt>
+                <dd className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{n}</dd>
+                <dd className="mt-1 text-sm text-ink-muted">{l}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
 
         {/* ---------- Antes / después ---------- */}
-        <section className="border-y border-line bg-surface">
-          <div className="mx-auto max-w-6xl px-5 py-16">
-            <h2 className="max-w-2xl font-display text-3xl font-bold tracking-tight sm:text-4xl">Lo que deja de pasar cada semana</h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              {PAINS.map(([before, after]) => (
-                <div key={before} className="rounded-2xl border border-line p-5">
+        <section className="mx-auto max-w-6xl px-5 py-24">
+          <SectionTitle kicker="Lo que cambia" title="Lo que deja de pasar cada semana" />
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            {PAINS.map(([before, after]) => (
+              <div key={before} className="group flex items-start gap-4 rounded-2xl border border-line bg-surface p-6 transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(27,27,26,0.35)]">
+                <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-accent-soft text-accent">
+                  <CheckIcon />
+                </span>
+                <div>
                   <p className="text-ink-muted line-through decoration-danger/50">{before}</p>
-                  <p className="mt-1.5 text-lg font-semibold">{after}</p>
+                  <p className="mt-1 text-lg font-semibold">{after}</p>
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- Cuadrante ---------- */}
+        <section id="cuadrante" className="scroll-mt-20 border-y border-line bg-surface">
+          <div className="mx-auto grid grid-cols-1 max-w-6xl items-center gap-14 px-5 py-24 lg:grid-cols-2">
+            <div>
+              <SectionTitle kicker="Cuadrante automático" title="Pulsa un botón y tienes la semana hecha" />
+              <p className="mt-5 text-lg leading-relaxed text-ink-soft">
+                Rotafy prueba muchas combinaciones y se queda con la que cubre todo lo que necesitas y reparte mejor las noches, los cierres y los fines de
+                semana. Si algo no cuadra, lo ves en rojo antes de publicar.
+              </p>
+              <ul className="mt-7 grid gap-3.5">
+                <Bullet>Respeta disponibilidad, horas de contrato, vacaciones y bajas.</Bullet>
+                <Bullet>Tus reglas: descanso entre jornadas, días libres, cierres seguidos, horas extra.</Bullet>
+                <Bullet>Reglas propias por persona y días que prefiere librar.</Bullet>
+                <Bullet>Retocas tocando una casilla, y puedes deshacer cualquier cambio grande.</Bullet>
+              </ul>
             </div>
+            <RulesPreview />
+          </div>
+        </section>
+
+        {/* ---------- A tu medida ---------- */}
+        <section className="mx-auto grid grid-cols-1 max-w-6xl items-center gap-14 px-5 py-24 lg:grid-cols-2">
+          <ShiftsPreview />
+          <div className="lg:order-first">
+            <SectionTitle kicker="A tu medida" title="Tus franjas, tus puestos, tus nombres" />
+            <p className="mt-5 text-lg leading-relaxed text-ink-soft">
+              ¿Mañana, tarde y noche? ¿Turno partido? ¿«Línea 12» para un conductor? Llama a cada franja como la llamáis vosotros, con su horario, y marca cuáles
+              son de cierre. Hasta ocho por negocio.
+            </p>
+            <ul className="mt-7 grid gap-3.5">
+              <Bullet>Empiezas con la plantilla de tu sector y la cambias en un minuto.</Bullet>
+              <Bullet>Puestos con su color: sala, cocina, caja, auxiliares…</Bullet>
+              <Bullet>Cuánta gente de cada puesto necesitas en cada franja y día.</Bullet>
+            </ul>
+          </div>
+        </section>
+
+        {/* ---------- Fichaje ---------- */}
+        <section id="fichaje" className="scroll-mt-16 bg-ink text-white">
+          <div className="relative mx-auto max-w-6xl px-5 py-24">
+            <div aria-hidden className="pointer-events-none absolute right-0 top-10 h-80 w-80 rounded-full bg-[radial-gradient(closest-side,rgba(143,211,176,0.18),transparent)]" />
+            <div className="relative grid grid-cols-1 items-center gap-14 lg:grid-cols-[1fr_1.1fr]">
+              <div>
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#8FD3B0]">Registro de jornada</p>
+                <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Fichan desde el móvil. Tú lo ves todo.</h2>
+                <p className="mt-5 text-lg leading-relaxed text-white/75">
+                  Cada persona ficha la entrada y la salida desde su enlace, sin instalar nada. En el cuadrante ves a qué hora fichó cada uno, debajo de su turno.
+                </p>
+                <ul className="mt-8 grid gap-4">
+                  {[
+                    ["Hora del servidor", "No vale cambiar la hora del móvil."],
+                    ["Olvidos resueltos", "Si alguien no ficha la salida, lo corriges y queda guardado el motivo y la hora original."],
+                    ["Horas reales de cada uno", "Totales por semana y quién está trabajando ahora."],
+                    ["Excel para la gestoría", "El registro del mes en un clic, listo para la Inspección."],
+                  ].map(([t, d]) => (
+                    <li key={t} className="flex gap-3.5">
+                      <span className="mt-1 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#8FD3B0]/15 text-[#8FD3B0]">
+                        <CheckIcon />
+                      </span>
+                      <span>
+                        <strong className="font-semibold">{t}.</strong> <span className="text-white/70">{d}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <ClockPreview />
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Enlace personal ---------- */}
+        <section className="border-b border-line bg-surface">
+          <div className="mx-auto grid grid-cols-1 max-w-6xl items-center gap-14 px-5 py-24 lg:grid-cols-2">
+            <div>
+              <SectionTitle kicker="Para tu equipo" title="Un enlace por persona. Nada que instalar." />
+              <p className="mt-5 text-lg leading-relaxed text-ink-soft">
+                Al publicar, mandas a cada uno su horario por WhatsApp con un toque. En su enlace lo tiene siempre al día, ficha y pide cambios. Si quiere, sus
+                turnos aparecen solos en el calendario del móvil.
+              </p>
+              <ul className="mt-7 grid gap-3.5">
+                <Bullet>Único para cada persona: si se comparte, lo cambias y el anterior deja de funcionar.</Bullet>
+                <Bullet>Se suscribe una vez al calendario (iPhone, Google, Outlook) y se actualiza solo.</Bullet>
+                <Bullet>Pide librar o cambiarse con un compañero, sin mensajes por privado.</Bullet>
+              </ul>
+            </div>
+            <WhatsAppPreview />
+          </div>
+        </section>
+
+        {/* ---------- Más ---------- */}
+        <section className="mx-auto max-w-6xl px-5 py-24">
+          <SectionTitle kicker="Y además" title="Los detalles que ahorran discusiones" />
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {MORE.map((f) => (
+              <div key={f.title} className="rounded-2xl border border-line bg-surface p-6">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                  <FeatureIcon name={f.icon} />
+                </span>
+                <h3 className="mt-4 text-lg font-semibold">{f.title}</h3>
+                <p className="mt-1 leading-relaxed text-ink-soft">{f.text}</p>
+              </div>
+            ))}
           </div>
         </section>
 
         {/* ---------- Cómo funciona ---------- */}
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Así de simple</h2>
-          <ol className="mt-8 grid gap-6 md:grid-cols-3">
-            {[
-              ["Añade a tu equipo", "Nombre, puesto, horas de contrato y cuándo puede trabajar cada persona. Solo la primera vez."],
-              ["Genera y retoca", "Rotafy propone el cuadrante y marca en rojo lo que no cuadra. Tocas una casilla para cambiarla."],
-              ["Publica y avisa", "Cada persona recibe su horario por WhatsApp y lo tiene siempre en su enlace y en su calendario."],
-            ].map(([t, d], i) => (
-              <li key={t} className="rounded-2xl bg-surface p-6 shadow-[0_1px_0_#E4E1D8]">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent font-display text-lg font-bold text-white">{i + 1}</span>
-                <h3 className="mt-4 font-display text-2xl font-bold">{t}</h3>
-                <p className="mt-2 leading-relaxed text-ink-soft">{d}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        {/* ---------- Funciones ---------- */}
         <section className="border-y border-line bg-surface">
-          <div className="mx-auto max-w-6xl px-5 py-16">
-            <h2 className="max-w-2xl font-display text-3xl font-bold tracking-tight sm:text-4xl">Todo lo que necesita un encargado</h2>
-            <div className="mt-8 grid gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
-              {FEATURES.map((f, i) => (
-                <div key={f.title} className="flex gap-4">
-                  <span className="mt-1 h-8 w-8 flex-none rounded-lg" style={{ backgroundColor: PALETTE[i].bg, boxShadow: `inset 0 0 0 1px ${PALETTE[i].fg}30` }} />
-                  <div>
-                    <h3 className="text-lg font-semibold">{f.title}</h3>
-                    <p className="mt-1 leading-relaxed text-ink-soft">{f.text}</p>
-                  </div>
-                </div>
+          <div className="mx-auto max-w-6xl px-5 py-24">
+            <SectionTitle kicker="Cómo empezar" title="Listo en diez minutos" />
+            <ol className="relative mt-12 grid gap-10 md:grid-cols-3 md:gap-6">
+              <div aria-hidden className="absolute left-5 right-[16%] top-5 hidden h-px bg-line-strong md:block" />
+              {[
+                ["Elige tu sector", "Te creamos franjas, puestos y necesidades típicas. Lo cambias todo cuando quieras."],
+                ["Añade a tu equipo", "Nombre, puesto, horas de contrato y cuándo puede trabajar. Solo la primera vez."],
+                ["Genera, publica y ficha", "Retocas, publicas y cada uno recibe su horario. Si lo activas, empiezan a fichar."],
+              ].map(([t, d], i) => (
+                <li key={t} className="relative">
+                  <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-accent font-display text-lg font-bold text-white ring-8 ring-surface">
+                    {i + 1}
+                  </span>
+                  <h3 className="mt-5 font-display text-2xl font-bold">{t}</h3>
+                  <p className="mt-2 leading-relaxed text-ink-soft">{d}</p>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </section>
 
         {/* ---------- Sectores ---------- */}
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Para cualquier equipo con turnos</h2>
-          <div className="mt-6 flex flex-wrap gap-2.5">
-            {SECTORS.map((s) => (
-              <span key={s} className="rounded-full border border-line-strong bg-surface px-4 py-2 text-[15px]">
-                {s}
-              </span>
+        <section id="sectores" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-24">
+          <SectionTitle kicker="Plantillas" title="Para cualquier equipo con turnos" />
+          <p className="mt-4 max-w-2xl text-lg text-ink-soft">Elige tu sector al crear la cuenta y empiezas con todo preparado.</p>
+          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {SECTORS.map((s, i) => (
+              <div key={s.key} className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4">
+                <span className="mt-1 h-3 w-3 flex-none rounded-[4px]" style={{ backgroundColor: PALETTE[i % PALETTE.length].fg }} />
+                <div className="min-w-0">
+                  <div className="font-semibold leading-snug">{s.label}</div>
+                  <div className="mt-0.5 text-sm text-ink-muted">{s.hint}</div>
+                </div>
+              </div>
             ))}
           </div>
         </section>
 
+        {/* ---------- Demo ---------- */}
+        <section className="mx-auto max-w-6xl px-5 pb-24">
+          <div className="relative overflow-hidden rounded-3xl border border-line bg-surface px-7 py-12 sm:px-12">
+            <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(31,92,70,0.14),transparent)]" />
+            <div className="relative flex flex-wrap items-center justify-between gap-8">
+              <div className="max-w-xl">
+                <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Pruébalo ahora, sin registrarte</h2>
+                <p className="mt-3 text-lg text-ink-soft">
+                  La demo es la app de verdad con un equipo de ejemplo. Una guía te lleva paso a paso: generar, publicar, avisar y revisar fichajes.
+                </p>
+              </div>
+              <Link href="/demo" className={`${ui.btn} ${ui.secondary} h-[52px] px-7 text-base`}>
+                <PlayIcon /> Abrir la demo guiada
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* ---------- Preguntas ---------- */}
-        <section className="border-t border-line bg-surface">
-          <div className="mx-auto max-w-3xl px-5 py-16">
-            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Preguntas frecuentes</h2>
-            <div className="mt-6 divide-y divide-line">
+        <section id="preguntas" className="scroll-mt-16 border-t border-line bg-surface">
+          <div className="mx-auto max-w-3xl px-5 py-24">
+            <SectionTitle kicker="Dudas" title="Preguntas frecuentes" />
+            <div className="mt-8 divide-y divide-line border-y border-line">
               {FAQ.map(([q, a]) => (
                 <details key={q} className="group py-4">
                   <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
                     {q}
-                    <span className="text-2xl text-ink-muted transition group-open:rotate-45" aria-hidden="true">
+                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-line-strong text-xl text-ink-muted transition group-open:rotate-45" aria-hidden="true">
                       +
                     </span>
                   </summary>
-                  <p className="mt-2 leading-relaxed text-ink-soft">{a}</p>
+                  <p className="mt-2 pr-10 leading-relaxed text-ink-soft">{a}</p>
                 </details>
               ))}
             </div>
@@ -187,13 +342,19 @@ export default function Home() {
         </section>
 
         {/* ---------- Llamada final ---------- */}
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="rounded-3xl bg-accent px-7 py-12 text-white sm:px-12">
-            <h2 className="max-w-2xl font-display text-3xl font-bold tracking-tight sm:text-4xl">Haz el cuadrante de la semana que viene con Rotafy.</h2>
-            <p className="mt-3 max-w-xl text-white/85">Configurarlo lleva diez minutos. Si no te ahorra tiempo, vuelves al Excel.</p>
-            <Link href="/login" className={`${ui.btn} mt-7 h-12 bg-white px-6 text-base text-accent-ink hover:bg-ground`}>
-              Crear mi cuenta gratis
-            </Link>
+        <section className="mx-auto max-w-6xl px-5 py-20">
+          <div className="relative overflow-hidden rounded-3xl bg-accent px-7 py-14 text-white sm:px-14">
+            <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-10 h-80 w-80 rounded-full bg-[radial-gradient(closest-side,rgba(255,255,255,0.14),transparent)]" />
+            <h2 className="relative max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-5xl">Haz el cuadrante de la semana que viene con Rotafy.</h2>
+            <p className="relative mt-4 max-w-xl text-lg text-white/85">Configurarlo lleva diez minutos. Si no te ahorra tiempo, vuelves al Excel.</p>
+            <div className="relative mt-8 flex flex-wrap gap-3">
+              <Link href="/login" className={`${ui.btn} h-[52px] bg-white px-7 text-base text-accent-ink hover:bg-ground`}>
+                Crear mi cuenta gratis
+              </Link>
+              <Link href="/demo" className={`${ui.btn} h-[52px] border border-white/30 px-7 text-base text-white hover:bg-white/10`}>
+                Ver la demo
+              </Link>
+            </div>
           </div>
         </section>
       </main>
@@ -201,11 +362,14 @@ export default function Home() {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8 text-sm text-ink-muted">
           <span className="flex items-center gap-2">
-            <LogoMark size={20} /> Rotafy · Cuadrantes de turnos
+            <LogoMark size={20} /> Rotafy · Cuadrantes de turnos y fichaje
           </span>
-          <nav className="flex gap-5">
+          <nav className="flex flex-wrap gap-5">
             <Link href="/legal/privacidad" className="hover:text-ink">
               Privacidad
+            </Link>
+            <Link href="/legal/cookies" className="hover:text-ink">
+              Cookies
             </Link>
             <Link href="/legal/aviso-legal" className="hover:text-ink">
               Aviso legal
@@ -217,71 +381,312 @@ export default function Home() {
   );
 }
 
-/** Vista previa del producto hecha con HTML (no es una imagen: se ve nítida en cualquier pantalla). */
-function ProductPreview() {
-  const rows: { name: string; role: number; cells: (string | null)[] }[] = [
-    { name: "Marta", role: 0, cells: ["09–17", "09–17", "09–17", "09–17", "09–17", null, null] },
-    { name: "Jordi", role: 1, cells: ["17–01", null, "17–01", "17–01", null, "17–01", "09–17"] },
-    { name: "Laura", role: 2, cells: [null, "17–01", "17–01", null, "17–01", "13–21", null] },
-    { name: "Aleix", role: 0, cells: [null, null, null, null, "17–01", "13–21", null] },
+// ---------- Piezas ----------
+
+function SectionTitle({ kicker, title }: { kicker: string; title: string }) {
+  return (
+    <div>
+      <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-accent">{kicker}</p>
+      <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-5xl">{title}</h2>
+    </div>
+  );
+}
+
+function Bullet({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-3 text-[16px] leading-relaxed">
+      <span className="mt-1 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-accent text-white">
+        <CheckIcon small />
+      </span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function CheckIcon({ small }: { small?: boolean }) {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className={small ? "h-3 w-3" : "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 8.5l3 3 6-7" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor">
+      <path d="M5 3.2v9.6a.6.6 0 00.9.5l7.6-4.8a.6.6 0 000-1L5.9 2.7a.6.6 0 00-.9.5z" />
+    </svg>
+  );
+}
+
+function FeatureIcon({ name }: { name: (typeof MORE)[number]["icon"] }) {
+  const paths: Record<typeof name, React.ReactNode> = {
+    plane: <path d="M2.5 13.5l17-7-4 14-4.5-5.5-5.5-.5zM11 15l8.5-8.5" />,
+    swap: <path d="M4 8h14l-4-4M18 14H4l4 4" />,
+    copy: (
+      <>
+        <rect x="7" y="7" width="12" height="12" rx="2" />
+        <path d="M15 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2h2" />
+      </>
+    ),
+    print: (
+      <>
+        <path d="M6 9V3h10v6M6 16H4a1 1 0 01-1-1v-5a1 1 0 011-1h14a1 1 0 011 1v5a1 1 0 01-1 1h-2" />
+        <rect x="6" y="13" width="10" height="6" rx="1" />
+      </>
+    ),
+    compass: (
+      <>
+        <circle cx="11" cy="11" r="8.5" />
+        <path d="M14.5 7.5l-2 5-5 2 2-5z" />
+      </>
+    ),
+    lock: (
+      <>
+        <rect x="4" y="10" width="14" height="9" rx="2" />
+        <path d="M7.5 10V7a3.5 3.5 0 017 0v3" />
+      </>
+    ),
+  };
+  return (
+    <svg aria-hidden viewBox="0 0 22 22" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name]}
+    </svg>
+  );
+}
+
+// ---------- Vistas previas (HTML, no imágenes: nítidas en cualquier pantalla) ----------
+
+type Cell = { t: string; clock?: { text: string; tone: "ok" | "late" | "open" } } | null;
+
+function HeroPreview() {
+  const rows: { name: string; role: number; cells: Cell[] }[] = [
+    { name: "Marta", role: 0, cells: [{ t: "09–17", clock: { text: "✓ 08:57–17:02", tone: "ok" } }, { t: "09–17", clock: { text: "✓ 08:59–17:00", tone: "ok" } }, { t: "09–17", clock: { text: "● 08:58", tone: "open" } }, { t: "09–17" }, { t: "09–17" }, null, null] },
+    { name: "Jordi", role: 1, cells: [{ t: "17–01", clock: { text: "Tarde +12′", tone: "late" } }, null, { t: "17–01" }, { t: "17–01" }, null, { t: "17–01" }, { t: "09–17" }] },
+    { name: "Laura", role: 2, cells: [null, { t: "17–01", clock: { text: "✓ 16:55–01:03", tone: "ok" } }, { t: "17–01" }, null, { t: "17–01" }, { t: "13–21" }, null] },
+    { name: "Aleix", role: 0, cells: [null, null, null, { t: "13–21" }, { t: "17–01" }, { t: "13–21" }, null] },
+  ];
+  const tone = { ok: "bg-white/80 text-accent", late: "bg-pending-soft text-pending-ink", open: "bg-ok-soft text-accent" };
+  return (
+    <div className="relative" aria-label="Vista previa de Rotafy: cuadrante semanal con fichajes" role="img">
+      <div className="rounded-[28px] border border-line bg-surface/90 p-2 shadow-[0_40px_80px_-40px_rgba(27,27,26,0.45)] backdrop-blur">
+        <div className="flex items-center gap-1.5 px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#E4E1D8]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#E4E1D8]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#E4E1D8]" />
+          <span className="ml-3 flex-1 truncate rounded-md bg-ground px-3 py-1 text-[11px] text-ink-muted">rotafy.es/app/cuadrante</span>
+        </div>
+        <div className="rounded-[20px] border border-line bg-surface p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">Semana 42</div>
+              <div className="font-display text-xl font-bold">12 – 18 octubre</div>
+            </div>
+            <span className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white">Publicar y avisar</span>
+          </div>
+          <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] gap-1 text-[10px] sm:grid-cols-[56px_repeat(7,minmax(0,1fr))] sm:text-[11px]">
+            <span />
+            {["L", "M", "X", "J", "V", "S", "D"].map((d) => (
+              <span key={d} className="text-center font-semibold text-ink-muted">
+                {d}
+              </span>
+            ))}
+            {rows.map((r) => (
+              <div key={r.name} className="contents">
+                <span className="flex items-center truncate font-semibold">{r.name}</span>
+                {r.cells.map((c, i) => (
+                  <span
+                    key={i}
+                    className={`flex min-h-11 flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-md px-0.5 py-1 text-[9px] font-semibold sm:text-[11px] ${c ? "" : "border border-dashed border-[#CFCBC0] text-[#A9A59B]"}`}
+                    style={c ? { backgroundColor: PALETTE[r.role].bg, color: PALETTE[r.role].fg } : undefined}
+                  >
+                    {c?.t ?? "—"}
+                    {c?.clock && <span className={`hidden max-w-full truncate rounded px-1 leading-tight sm:block sm:text-[9px] ${tone[c.clock.tone]}`}>{c.clock.text}</span>}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:mr-36">
+            <div className="flex items-center gap-2 rounded-xl bg-danger-soft px-3 py-2 text-xs text-danger-ink">
+              <span className="h-2 w-2 flex-none rounded-full bg-danger" /> Sábado noche: falta 1 en barra
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-ok-soft px-3 py-2 text-xs text-accent">
+              <span className="h-2 w-2 flex-none rounded-full bg-accent" /> Descansos y días libres: todo en regla
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute -bottom-24 -right-2 hidden w-[168px] rotate-[3deg] rounded-[28px] border-[6px] border-ink bg-surface p-3 shadow-2xl sm:block">
+        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line" />
+        <div className="text-[10px] text-ink-muted">Hola, Laura</div>
+        <div className="mt-1 rounded-xl bg-accent p-2.5 text-white">
+          <div className="text-[9px] uppercase tracking-wide opacity-80">Hoy · miércoles</div>
+          <div className="font-display text-lg font-bold leading-tight">17:00 – 01:00</div>
+        </div>
+        <div className="mt-2 flex h-10 items-center justify-center rounded-xl bg-ink text-[11px] font-semibold text-white">Fichar entrada</div>
+        <div className="mt-2 rounded-lg border border-line px-2 py-1 text-[9px]">Jue · Libre</div>
+      </div>
+    </div>
+  );
+}
+
+function RulesPreview() {
+  const rules = [
+    ["Descanso mínimo entre jornadas", "12", "horas"],
+    ["Días libres por semana", "2", "días"],
+    ["Cierres seguidos como máximo", "3", "noches"],
+    ["Horas extra permitidas", "4", "h/semana"],
   ];
   return (
-    <div className="relative" aria-label="Vista previa de Rotafy" role="img">
-      <div className="rounded-3xl border border-line bg-surface p-4 shadow-[0_30px_60px_-30px_rgba(27,27,26,0.35)] sm:p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">Semana 42</div>
-            <div className="font-display text-xl font-bold">12 – 18 octubre</div>
-          </div>
-          <span className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white">Publicar y avisar</span>
+    <div className="relative" role="img" aria-label="Vista previa de las reglas del cuadrante">
+      <div className="rounded-3xl border border-line bg-ground p-5 sm:p-6">
+        <div className="mb-4 font-display text-lg font-bold">Reglas del cuadrante</div>
+        <div className="flex flex-col gap-2.5">
+          {rules.map(([t, v, u]) => (
+            <div key={t} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3">
+              <span className="text-[14px] font-medium">{t}</span>
+              <span className="flex items-center gap-2">
+                <span className="flex h-9 items-center overflow-hidden rounded-lg border border-line-strong text-sm">
+                  <span className="px-2.5 text-ink-muted">−</span>
+                  <span className="w-9 border-x border-line text-center font-semibold tabular-nums">{v}</span>
+                  <span className="px-2.5 text-ink-muted">+</span>
+                </span>
+                <span className="hidden w-16 text-[13px] text-ink-muted sm:block">{u}</span>
+              </span>
+            </div>
+          ))}
         </div>
-        <div className="grid grid-cols-[52px_repeat(7,1fr)] gap-1 text-[10px] sm:grid-cols-[60px_repeat(7,1fr)] sm:text-[11px]">
+        <div className="mt-4 rounded-xl border border-dashed border-accent/40 bg-accent-soft px-4 py-3 text-[13px] text-accent-ink">
+          <strong>Nuria</strong> · prefiere librar domingo · máximo 2 cierres seguidos
+        </div>
+      </div>
+      <div className="absolute -left-4 -top-5 hidden rotate-[-3deg] rounded-xl bg-ink px-3.5 py-2 text-[13px] font-semibold text-white shadow-xl sm:block">
+        ✨ Semana generada
+      </div>
+    </div>
+  );
+}
+
+function ShiftsPreview() {
+  const shifts = [
+    { label: "Línea 12 · mañana", time: "06:00 – 14:00", color: 0 },
+    { label: "Línea 12 · tarde", time: "14:00 – 22:00", color: 3 },
+    { label: "Partido", time: "10:00 – 18:00", color: 4 },
+    { label: "Cierre", time: "18:00 – 02:00", color: 2, closing: true },
+  ];
+  return (
+    <div className="rounded-3xl border border-line bg-surface p-5 shadow-[0_30px_60px_-40px_rgba(27,27,26,0.4)] sm:p-6" role="img" aria-label="Vista previa de franjas personalizadas">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="font-display text-lg font-bold">Franjas</div>
+        <span className="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-semibold">+ Añadir franja</span>
+      </div>
+      <div className="flex flex-col gap-2.5">
+        {shifts.map((s) => (
+          <div key={s.label} className="flex items-center gap-3 rounded-xl border border-line px-3 py-2.5">
+            <span className="h-8 w-1.5 flex-none rounded-full" style={{ backgroundColor: PALETTE[s.color].fg }} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold">{s.label}</span>
+              <span className="block text-[13px] tabular-nums text-ink-muted">{s.time}</span>
+            </span>
+            {s.closing && <span className="rounded-full bg-pending-soft px-2 py-0.5 text-[11px] font-semibold text-pending-ink">Cierre</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ClockPreview() {
+  const rows = [
+    { name: "Marta", cells: ["✓ 08:57–17:02", "✓ 08:59–17:00", "● 08:58"], tone: ["ok", "ok", "open"] },
+    { name: "Jordi", cells: ["Tarde +12′", "✓ 16:58–01:00", "—"], tone: ["late", "ok", "none"] },
+    { name: "Laura", cells: ["Sin salida", "✓ 17:01–01:04", "● 16:56"], tone: ["bad", "ok", "open"] },
+  ];
+  const cls: Record<string, string> = {
+    ok: "bg-white/10 text-[#8FD3B0]",
+    late: "bg-[#FBEFD5]/15 text-[#F5C770]",
+    open: "bg-[#8FD3B0]/20 text-[#8FD3B0]",
+    bad: "bg-[#FBE6DD]/15 text-[#F4A587]",
+    none: "text-white/30",
+  };
+  return (
+    <div className="relative" role="img" aria-label="Vista previa del registro de fichajes">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-2xl backdrop-blur sm:p-6">
+        <div className="mb-5 grid grid-cols-3 gap-2.5">
+          {[
+            ["Trabajando ahora", "2"],
+            ["Horas esta semana", "86 h"],
+            ["Por revisar", "1"],
+          ].map(([l, v]) => (
+            <div key={l} className="rounded-xl bg-white/[0.06] p-3">
+              <div className="text-[11px] text-white/55">{l}</div>
+              <div className="mt-0.5 font-display text-2xl font-bold">{v}</div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-[52px_repeat(3,minmax(0,1fr))] gap-1.5 text-[11px] sm:grid-cols-[64px_repeat(3,minmax(0,1fr))]">
           <span />
-          {["L", "M", "X", "J", "V", "S", "D"].map((d) => (
-            <span key={d} className="text-center font-semibold text-ink-muted">
+          {["Lun", "Mar", "Mié"].map((d) => (
+            <span key={d} className="text-center font-semibold text-white/50">
               {d}
             </span>
           ))}
           {rows.map((r) => (
             <div key={r.name} className="contents">
-              <span className="flex items-center truncate font-semibold">{r.name}</span>
+              <span className="flex items-center font-semibold">{r.name}</span>
               {r.cells.map((c, i) => (
-                <span
-                  key={i}
-                  className={`flex h-9 items-center justify-center rounded-md font-semibold ${c ? "" : "border border-dashed border-[#CFCBC0] text-[#A9A59B]"}`}
-                  style={c ? { backgroundColor: PALETTE[r.role].bg, color: PALETTE[r.role].fg } : undefined}
-                >
-                  {c ?? "—"}
+                <span key={i} className={`flex h-10 items-center justify-center truncate rounded-lg px-1 font-semibold tabular-nums ${cls[r.tone[i]]}`}>
+                  {c}
                 </span>
               ))}
             </div>
           ))}
         </div>
-        {/* La parte derecha queda libre para el móvil que se superpone. */}
-        <div className="mt-3 flex flex-col gap-2 sm:mr-40">
-          <div className="flex items-center gap-2 rounded-xl bg-danger-soft px-3 py-2 text-xs text-danger-ink">
-            <span className="h-2 w-2 flex-none rounded-full bg-danger" /> Sábado noche: falta 1 en barra
-          </div>
-          <div className="flex items-center gap-2 rounded-xl bg-ok-soft px-3 py-2 text-xs text-accent">
-            <span className="h-2 w-2 flex-none rounded-full bg-accent" /> Descansos de 12 h y días libres: todo en regla
-          </div>
+        <div className="mt-4 rounded-xl bg-white/[0.06] px-4 py-3 text-[12.5px] text-white/75 sm:ml-32">
+          <span className="font-semibold text-white">Corregido:</span> Laura, lun · salida 01:00 · «Olvidó fichar al cerrar»
         </div>
       </div>
+      <div className="absolute -bottom-24 -left-6 hidden w-[150px] rotate-[-4deg] rounded-[26px] border-[5px] border-[#2C2C2A] bg-surface p-3 text-ink shadow-2xl sm:block">
+        <div className="text-[10px] text-ink-muted">Trabajando desde las 08:58</div>
+        <div className="mt-1 font-display text-2xl font-bold tabular-nums">3:42:10</div>
+        <div className="mt-2 flex h-10 items-center justify-center rounded-xl bg-danger text-[11px] font-semibold text-white">Fichar salida</div>
+      </div>
+    </div>
+  );
+}
 
-      <div className="absolute -bottom-24 -right-3 hidden w-40 rotate-[3deg] rounded-[26px] border-[6px] border-ink bg-surface p-3 shadow-xl sm:block">
-        <div className="text-[10px] text-ink-muted">Hola, Laura</div>
-        <div className="mt-1 rounded-xl bg-accent p-2.5 text-white">
-          <div className="text-[9px] uppercase tracking-wide opacity-80">Hoy · miércoles</div>
-          <div className="font-display text-lg font-bold leading-tight">17:00 – 01:00</div>
-          <div className="text-[10px]">Noche</div>
+function WhatsAppPreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-[400px]" role="img" aria-label="Vista previa del mensaje de WhatsApp con el horario">
+      <div className="rounded-[34px] border-[7px] border-ink bg-[#EFE7DD] p-4 shadow-[0_40px_80px_-40px_rgba(27,27,26,0.55)]">
+        <div className="mb-3 flex items-center gap-2.5 rounded-2xl bg-surface/80 px-3 py-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">BC</span>
+          <span className="text-sm font-semibold">Bar Central</span>
         </div>
-        <div className="mt-2 space-y-1">
-          {["Jue · Libre", "Vie · 17:00 – 01:00"].map((t) => (
-            <div key={t} className="rounded-lg border border-line px-2 py-1 text-[9px]">
-              {t}
-            </div>
-          ))}
+        <div className="ml-auto max-w-[92%] rounded-2xl rounded-tr-sm bg-[#D9FDD3] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#111B21] shadow-sm">
+          Hola Laura, ya está tu horario de Bar Central (12–18 oct):
+          <br />
+          <br />
+          Mar 13 · Noche 17:00–01:00
+          <br />
+          Mié 14 · Noche 17:00–01:00
+          <br />
+          Vie 16 · Noche 17:00–01:00
+          <br />
+          Sáb 17 · Tarde 13:00–21:00
+          <br />
+          <br />
+          Lo tienes siempre aquí: <span className="text-[#027EB5] underline">rotafy.es/h/laura-…</span>
+          <br />
+          <span className="text-[#54656F]">(Es tu enlace personal: no lo compartas.)</span>
+          <span className="mt-1 block text-right text-[10px] text-[#667781]">19:42 ✓✓</span>
         </div>
+      </div>
+      <div className="absolute -right-3 top-24 hidden rotate-[4deg] rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[12px] shadow-xl sm:block">
+        <div className="font-semibold">📅 Añadido al calendario</div>
+        <div className="text-ink-muted">Se actualiza solo</div>
       </div>
     </div>
   );

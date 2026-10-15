@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { AppGuide, GuideButton } from "@/components/guide/AppGuide";
 import { SetupNotice } from "@/components/SetupNotice";
 import { requireLocal } from "@/lib/data/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -18,8 +19,9 @@ async function Shell({ children }: { children: React.ReactNode }) {
   const { local } = await requireLocal();
   return (
     <>
-      <AppHeader localName={local.nombre} nav={NAV} signOut={signOut} />
+      <AppHeader localName={local.nombre} nav={NAV} signOut={signOut} extra={<GuideButton />} />
       {children}
+      <AppGuide />
     </>
   );
 }

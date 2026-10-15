@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/feedback";
 import { useIsDemo } from "@/components/nav";
+import { NumberField } from "@/components/NumberField";
 import { ui } from "@/components/ui";
 import type { LocalSettings } from "@/lib/data/mappers";
 import type { SettingsInput } from "@/lib/forms";
@@ -105,26 +106,30 @@ function SettingsCards(props: {
         <div className="flex flex-col divide-y divide-[#EEEBE3]">
           <RuleRow
             title="Descanso mínimo entre jornadas"
-            help="El Estatuto de los Trabajadores exige al menos 12 horas."
+            help="Horas desde que alguien acaba hasta que vuelve a empezar. El Estatuto de los Trabajadores exige 12."
             value={r.minRestHours}
-            options={[0, 8, 9, 10, 11, 12, 13, 14, 16]}
+            min={0}
+            max={24}
             unit="h"
             onChange={(v) => setR({ ...r, minRestHours: v })}
-            warn={r.minRestHours < 12 ? "Por debajo de lo que marca la ley. Úsalo solo si tu convenio lo permite." : undefined}
+            warn={r.minRestHours < 12 ? "Por debajo de lo que marca la ley (art. 34.3). Úsalo solo si tu convenio lo permite." : undefined}
           />
           <RuleRow
             title="Días libres mínimos por semana"
             help="Lo habitual en hostelería y comercio son 2."
             value={r.minDaysOff}
-            options={[0, 1, 2, 3, 4]}
+            min={0}
+            max={6}
             unit={r.minDaysOff === 1 ? "día" : "días"}
             onChange={(v) => setR({ ...r, minDaysOff: v })}
+            warn={r.minDaysOff < 2 ? "La ley garantiza día y medio de descanso semanal (art. 37.1). Con menos de 2, revisa tu convenio." : undefined}
           />
           <RuleRow
             title="Máximo de cierres seguidos"
             help="Días seguidos en franjas marcadas como cierre (las que acaban tarde)."
             value={r.maxConsecutiveNights}
-            options={[1, 2, 3, 4, 5, 6, 7]}
+            min={1}
+            max={7}
             unit={r.maxConsecutiveNights === 1 ? "cierre" : "cierres"}
             onChange={(v) => setR({ ...r, maxConsecutiveNights: v })}
           />
@@ -132,9 +137,11 @@ function SettingsCards(props: {
             title="Horas extra permitidas"
             help="Horas por semana que el generador puede pasar del contrato si no hay otra forma de cubrir un turno."
             value={r.maxExtraHours}
-            options={[0, 2, 4, 6, 8, 10, 12, 16, 20]}
+            min={0}
+            max={20}
             unit="h"
             onChange={(v) => setR({ ...r, maxExtraHours: v })}
+            warn={r.maxExtraHours > 8 ? "Ojo: la ley limita las horas extra a 80 al año por persona (art. 35.2)." : undefined}
           />
         </div>
       </section>
@@ -165,7 +172,8 @@ function SettingsCards(props: {
               title="Margen para retrasos"
               help="Minutos de cortesía antes de marcar que alguien entró tarde o salió antes."
               value={c.clockMarginMinutes}
-              options={[0, 5, 10, 15, 20, 30]}
+              min={0}
+              max={60}
               unit="min"
               onChange={(v) => setC({ ...c, clockMarginMinutes: v })}
             />
@@ -183,24 +191,15 @@ function SettingsCards(props: {
   );
 }
 
-function RuleRow(props: { title: string; help: string; value: number; options: number[]; unit: string; onChange: (v: number) => void; warn?: string }) {
+function RuleRow(props: { title: string; help: string; value: number; min: number; max: number; unit: string; onChange: (v: number) => void; warn?: string }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0">
-      <div className="min-w-0 flex-1">
+    <div className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0">
+      <div className="min-w-0 flex-1 basis-60">
         <div className="text-[15px] font-semibold">{props.title}</div>
         <div className="text-[13px] text-ink-muted">{props.help}</div>
         {props.warn && <div className="mt-1 text-[13px] font-medium text-danger-ink">{props.warn}</div>}
       </div>
-      <label className="flex items-center gap-2 text-sm text-ink-soft">
-        <select value={props.value} onChange={(e) => props.onChange(Number(e.target.value))} className={`${ui.input} w-20`} aria-label={props.title}>
-          {props.options.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-        <span className="w-12">{props.unit}</span>
-      </label>
+      <NumberField label={props.title} value={props.value} min={props.min} max={props.max} unit={props.unit} onChange={props.onChange} />
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function personalScheduleMessage(opts: {
 }): string {
   const lines = shiftLines(opts.row, opts.shifts, opts.monday);
   const body = lines.length ? lines.join("\n") : "Esta semana libras todos los días.";
-  return `Hola ${opts.name}, ya está tu horario de ${opts.localName} (${weekRangeLabel(opts.monday)}):\n\n${body}\n\nLo tienes siempre aquí: ${opts.link}`;
+  return `Hola ${opts.name}, ya está tu horario de ${opts.localName} (${weekRangeLabel(opts.monday)}):\n\n${body}\n\nLo tienes siempre aquí: ${opts.link}\n(Es tu enlace personal: no lo compartas, con él se ficha a tu nombre.)`;
 }
 
 export function groupScheduleMessage(localName: string, monday: string): string {
