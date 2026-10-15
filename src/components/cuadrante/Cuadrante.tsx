@@ -1,14 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfirm, useToast } from "@/components/feedback";
+import { NavLink } from "@/components/nav";
 import { ui } from "@/components/ui";
 import { ABSENCE_LABELS, rowsToGrid, type AbsenceReason, type TurnoRow } from "@/lib/data/mappers";
-import { DAY_LONG, DAY_SHORT, dayOfMonth, isoWeekNumber, weekRangeLabel } from "@/lib/dates";
+import { addDays, DAY_LONG, DAY_SHORT, dayOfMonth, isoWeekNumber, weekRangeLabel } from "@/lib/dates";
+import { dayStatus, formatHours, groupByEmployeeDay, madridTime, recordHours, type ClockRecord, type DayStatus } from "@/lib/fichajes";
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import { emptyGrid, findGaps, findIssues, generateSchedule, hoursByEmployee } from "@/lib/schedule";
-import type { AbsenceMap, Code, Demand, Employee, Grid, IssueKind, Rules, ShiftCatalog, Slot } from "@/lib/schedule/types";
+import { activeSlots, FREE, type AbsenceMap, type Code, type Demand, type Employee, type Grid, type IssueKind, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
 import { NotifyDialog, type NotifyEmployee } from "./NotifyDialog";
 
 export type WeekStatus = "borrador" | "publicado" | "cambios";
@@ -53,6 +54,10 @@ interface Props {
   notify?: { baseUrl: string; localName: string };
   nav?: { prev: string; next: string; today: string; isCurrent: boolean };
   onboarding?: { anyPublished: boolean; previousWeekHasShifts: boolean };
+  /** Fichajes de la semana (si el local ficha). `now` llega del servidor para que todos vean lo mismo. */
+  clock?: { records: ClockRecord[]; now: string; marginMinutes: number; today: string };
+  /** Se llama tras generar o publicar (la demo lo usa para avanzar el tutorial). */
+  onEvent?: (event: "generated" | "published" | "edited") => void;
 }
 
 interface Selection {
@@ -60,8 +65,6 @@ interface Selection {
   day: number;
   rect: { top: number; bottom: number; left: number; width: number };
 }
-
-const SLOT_NAME: Record<Slot, string> = { M: "mañana", T: "tarde", N: "noche" };
 
 const STATUS_CHIP: Record<WeekStatus, { label: string; cls: string }> = {
   borrador: { label: "Borrador", cls: "bg-[#ECEAE3] text-ink-soft" },
@@ -74,7 +77,7 @@ const COLS =
 const ABSENT_BG = "bg-[repeating-linear-gradient(135deg,#F2F0EA_0_6px,#E7E4DB_6px_12px)]";
 
 export function Cuadrante(props: Props) {
-  const { employees, roles, demand, shifts, rules, monday, persistence, notify, nav, onboarding } = props;
+  const { employees, roles, demand, shifts, rules, monday, persistence, notify, nav, onboarding, clock, onEvent } = props;
   const absences = useMemo(() => props.absences ?? {}, [props.absences]);
   const ids = useMemo(() => employees.map((e) => e.id), [employees]);
   const roleById = useMemo(() => roleMap(roles), [roles]);
@@ -121,7 +124,7 @@ export function Cuadrante(props: Props) {
     };
   }, [sel]);
 
-  const gaps = useMemo(() => findGaps(grid, employees, demand), [grid, employees, demand]);
+  const gaps = useMemo(() => findGaps(grid, employees, demand, shifts), [grid, employees, demand, shifts]);
   const issues = useMemo(() => findIssues(grid, employees, shifts, rules, absences), [grid, employees, shifts, rules, absences]);
   const hours = useMemo(() => hoursByEmployee(grid, employees, shifts), [grid, employees, shifts]);
   const byId = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
@@ -133,17 +136,17 @@ export function Cuadrante(props: Props) {
 
   const totalGaps = gaps.reduce((a, g) => a + g.missing, 0);
   const warningCount = gaps.length + issues.length;
-  const isEmpty = ids.every((id) => grid[id]?.every((c) => c === "L"));
+  const isEmpty = ids.every((id) => grid[id]?.every((c) => c === FREE));
   const demandTotal = demand.reduce((a, d) => a + Object.values(d).reduce((x, byRole) => x + Object.values(byRole ?? {}).reduce((y, n) => y + n, 0), 0), 0);
   const hasAbsences = Object.values(absences).some((w) => w.some(Boolean));
 
   const issueText: Record<IssueKind, string> = {
-    "consecutive-nights": `cierra más de ${rules.maxConsecutiveNights} ${rules.maxConsecutiveNights === 1 ? "noche seguida" : "noches seguidas"}.`,
+    "consecutive-nights": "hace más cierres seguidos de los permitidos.",
     "short-rest": `descansa menos de ${rules.minRestHours} h entre dos jornadas.`,
     "absence-conflict": "tiene un turno un día que está ausente.",
     "outside-availability": "tiene un turno fuera de su disponibilidad.",
-    "too-few-days-off": `libra menos de ${rules.minDaysOff} ${rules.minDaysOff === 1 ? "día" : "días"} esta semana.`,
-    "over-contract": "supera sus horas de contrato.",
+    "too-few-days-off": "libra menos días de los que le tocan esta semana.",
+    "over-contract": rules.maxExtraHours ? `supera sus horas de contrato en más de ${rules.maxExtraHours} h.` : "supera sus horas de contrato.",
   };
 
   const persist = useCallback(
@@ -180,6 +183,7 @@ export function Cuadrante(props: Props) {
   function setCell(id: string, day: number, code: Code) {
     commit({ ...grid, [id]: grid[id].map((c, d) => (d === day ? code : c)) });
     setSel(null);
+    onEvent?.("edited");
   }
 
   function openCell(id: string, day: number, el: HTMLElement) {
@@ -197,6 +201,7 @@ export function Cuadrante(props: Props) {
   async function regenerate() {
     setMenuOpen(false);
     commitWithUndo(generateSchedule(employees, demand, shifts, rules, absences), "Cuadrante generado con las reglas, necesidades y ausencias de esta semana.");
+    onEvent?.("generated");
   }
 
   async function clearWeek() {
@@ -244,6 +249,7 @@ export function Cuadrante(props: Props) {
       }
       setStatus("publicado");
       setPublishedNow(true);
+      onEvent?.("published");
       if (notify) setNotifyOpen(true);
       else toast.show(`Publicado: ${employees.length} personas recibirían su horario.${totalGaps ? ` Quedan ${totalGaps} huecos.` : ""}`);
     } finally {
@@ -274,9 +280,32 @@ export function Cuadrante(props: Props) {
     toast.show(`Solicitud rechazada. Díselo a ${byId.get(r.empleadoId)?.name ?? "la persona"}.`);
   }
 
-  // "09:00" → "09", "17:30" → "17:30": cabe en una línea y se lee de un vistazo.
-  const hhmm = (t: string) => (t.endsWith(":00") ? t.slice(0, 2) : t);
-  const fmt = (c: Slot) => `${hhmm(shifts[c].start)}–${hhmm(shifts[c].end)} h`;
+  // Formato compacto para que quepa en una línea: "09–17 h", "6:30–14:30", "22:30–6:30".
+  const fmt = (c: Slot) => {
+    const s = shifts[c];
+    if (!s) return "Turno";
+    if (s.start.endsWith(":00") && s.end.endsWith(":00")) return `${s.start.slice(0, 2)}–${s.end.slice(0, 2)} h`;
+    const short = (t: string) => t.replace(/^0/, "");
+    return `${short(s.start)}–${short(s.end)}`;
+  };
+  const labelOf = (c: Slot) => shifts[c]?.label ?? "Franja borrada";
+
+  // Fichajes: qué pasó realmente cada día (solo hasta hoy).
+  const clockNow = clock ? new Date(clock.now) : null;
+  const clockByDay = clock ? groupByEmployeeDay(clock.records) : null;
+  const clockStatus = (employeeId: string, day: number): (DayStatus & { records: ClockRecord[] }) | null => {
+    if (!clock || !clockByDay || !clockNow) return null;
+    const date = addDays(monday, day);
+    if (date > clock.today) return null;
+    const records = clockByDay.get(`${employeeId}|${date}`) ?? [];
+    const code = grid[employeeId]?.[day] ?? FREE;
+    const shift = code !== FREE && shifts[code] ? shifts[code] : null;
+    if (!shift && !records.length) return null;
+    return { ...dayStatus(date, records, shift, clockNow, clock.marginMinutes), records };
+  };
+  const clockAttention = clock ? employees.reduce((a, e) => a + Array.from({ length: 7 }, (_, d) => clockStatus(e.id, d)).filter((c) => c && (c.kind === "forgot" || c.kind === "missing")).length, 0) : 0;
+  const workedWeek = (employeeId: string) =>
+    clock && clockNow ? clock.records.filter((r) => r.employeeId === employeeId).reduce((a, r) => a + recordHours(r, clockNow), 0) : 0;
 
   if (employees.length === 0) {
     return (
@@ -285,9 +314,9 @@ export function Cuadrante(props: Props) {
         <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink-soft">
           Para generar el cuadrante necesito saber quién trabaja contigo, sus horas de contrato y cuándo puede trabajar cada uno.
         </p>
-        <Link href="/app/empleados" className={`${ui.btn} ${ui.primary} mt-7`}>
+        <NavLink href="/app/empleados" className={`${ui.btn} ${ui.primary} mt-7`}>
           Añadir a mi equipo
-        </Link>
+        </NavLink>
       </main>
     );
   }
@@ -324,20 +353,22 @@ export function Cuadrante(props: Props) {
           </div>
           <div className="flex items-center gap-2">
             {nav && (
-              <Link href={nav.prev} aria-label="Semana anterior" className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] border border-line-strong bg-surface text-lg hover:border-ink print:hidden">
-                ‹
-              </Link>
+              <NavLink href={nav.prev} className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] border border-line-strong bg-surface text-lg hover:border-ink print:hidden">
+                <span aria-hidden>‹</span>
+                <span className="sr-only">Semana anterior</span>
+              </NavLink>
             )}
             <h1 className="font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">{weekRangeLabel(monday)}</h1>
             {nav && (
-              <Link href={nav.next} aria-label="Semana siguiente" className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] border border-line-strong bg-surface text-lg hover:border-ink print:hidden">
-                ›
-              </Link>
+              <NavLink href={nav.next} className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] border border-line-strong bg-surface text-lg hover:border-ink print:hidden">
+                <span aria-hidden>›</span>
+                <span className="sr-only">Semana siguiente</span>
+              </NavLink>
             )}
             {nav && !nav.isCurrent && (
-              <Link href={nav.today} className="ml-1 text-sm font-semibold text-accent underline-offset-2 hover:underline print:hidden">
+              <NavLink href={nav.today} className="ml-1 text-sm font-semibold text-accent underline-offset-2 hover:underline print:hidden">
                 Hoy
-              </Link>
+              </NavLink>
             )}
           </div>
         </div>
@@ -371,10 +402,10 @@ export function Cuadrante(props: Props) {
               </>
             )}
           </div>
-          <button onClick={regenerate} disabled={busy} className={`${ui.btn} ${ui.secondary}`}>
+          <button onClick={regenerate} disabled={busy} data-tour="generar" className={`${ui.btn} ${ui.secondary}`}>
             Generar automáticamente
           </button>
-          <button onClick={publish} disabled={busy || status === "publicado"} className={`${ui.btn} ${ui.primary} col-span-2`}>
+          <button onClick={publish} disabled={busy || status === "publicado"} data-tour="publicar" className={`${ui.btn} ${ui.primary} col-span-2`}>
             {busy ? "Un momento…" : status === "publicado" ? "Publicado ✓" : status === "cambios" ? "Publicar cambios" : "Publicar y avisar"}
           </button>
         </div>
@@ -437,27 +468,27 @@ export function Cuadrante(props: Props) {
                       const absent = absences[e.id]?.[d] as AbsenceReason | null | undefined;
                       const isSel = sel?.id === e.id && sel.day === d;
                       const bad = badCells.has(`${e.id}:${d}`);
+                      const cs = clockStatus(e.id, d);
                       const base = "flex min-h-[58px] w-full flex-col justify-center gap-0.5 rounded-[10px] px-2.5 py-2 text-left text-[13px] leading-tight transition hover:-translate-y-px hover:shadow-md";
-                      const look = c !== "L" ? "" : absent ? `${ABSENT_BG} text-ink-soft` : "border border-dashed border-[#CFCBC0] bg-surface text-[#8A877F]";
+                      const look = c !== FREE ? "" : absent ? `${ABSENT_BG} text-ink-soft` : "border border-dashed border-[#CFCBC0] bg-surface text-[#8A877F]";
                       return (
                         <button
                           key={d}
                           data-cell={`${e.id}:${d}`}
                           onClick={(ev) => openCell(e.id, d, ev.currentTarget)}
-                          aria-label={`${e.name}, ${DAY_LONG[d]}: ${c === "L" ? (absent ? ABSENCE_LABELS[absent] : "libre") : shifts[c].label}`}
-                          style={c !== "L" ? roleStyle(role?.color) : undefined}
+                          aria-label={`${e.name}, ${DAY_LONG[d]}: ${c === FREE ? (absent ? ABSENCE_LABELS[absent] : "libre") : labelOf(c)}`}
+                          style={c !== FREE ? roleStyle(role?.color) : undefined}
                           className={`${base} ${look} ${bad ? "ring-2 ring-inset ring-danger" : ""} ${isSel ? "outline outline-[3px] outline-offset-2 outline-ink" : ""}`}
                         >
-                          {c === "L" ? (
+                          {c === FREE ? (
                             <strong className="text-sm font-semibold">{absent ? ABSENCE_LABELS[absent] : "Libre"}</strong>
                           ) : (
                             <>
                               <strong className="whitespace-nowrap text-[15px] font-semibold">{fmt(c)}</strong>
-                              <span className={absent ? "font-semibold text-danger-ink" : "opacity-80"}>
-                                {absent ? `⚠ ${ABSENCE_LABELS[absent]}` : shifts[c].label}
-                              </span>
+                              <span className={`truncate ${absent ? "font-semibold text-danger-ink" : "opacity-80"}`}>{absent ? `⚠ ${ABSENCE_LABELS[absent]}` : labelOf(c)}</span>
                             </>
                           )}
+                          {cs && <ClockLine status={cs} />}
                         </button>
                       );
                     })}
@@ -466,6 +497,7 @@ export function Cuadrante(props: Props) {
                         {hours[e.id]}/{e.contractHours} h
                       </span>
                       <span className="text-xs text-ink-muted">{diff === 0 ? "Cuadra" : diff > 0 ? `+${diff} h` : `−${-diff} h`}</span>
+                      {clock && <span className="mt-0.5 text-[11px] font-semibold text-ink-soft" title="Horas fichadas esta semana">⏱ {formatHours(workedWeek(e.id))}</span>}
                     </div>
                   </div>
                 );
@@ -493,6 +525,14 @@ export function Cuadrante(props: Props) {
             <h2 className={`${ui.h2} mb-3`}>
               {warningCount === 0 ? "Todo en orden" : warningCount === 1 ? "1 cosa por revisar" : `${warningCount} cosas por revisar`}
             </h2>
+            {clockAttention > 0 && (
+              <NavLink href="/app/fichajes" className="mb-2 flex w-full items-center gap-2.5 rounded-lg bg-danger-soft/60 px-2 py-2 text-left text-sm hover:bg-danger-soft">
+                <Dot />
+                <span>
+                  <strong>Fichajes:</strong> {clockAttention} {clockAttention === 1 ? "día por revisar" : "días por revisar"}. <span className="text-ink-muted">Ver →</span>
+                </span>
+              </NavLink>
+            )}
             {warningCount === 0 ? (
               <p className="text-sm leading-relaxed text-accent">Todo cubierto y dentro de las reglas. Listo para publicar.</p>
             ) : (
@@ -502,7 +542,7 @@ export function Cuadrante(props: Props) {
                     <Dot />
                     <span>
                       <strong>
-                        {DAY_SHORT[g.day]} {dayOfMonth(monday, g.day)} · {SLOT_NAME[g.slot]}:
+                        {DAY_SHORT[g.day]} {dayOfMonth(monday, g.day)} · {labelOf(g.slot).toLowerCase()}:
                       </strong>{" "}
                       falta{g.missing > 1 ? `n ${g.missing}` : " 1"} en {(roleById[g.role]?.name ?? g.role).toLowerCase()}.
                     </span>
@@ -570,6 +610,7 @@ export function Cuadrante(props: Props) {
           absent={(absences[sel.id]?.[sel.day] as AbsenceReason | null) ?? null}
           monday={monday}
           shifts={shifts}
+          clock={clockStatus(sel.id, sel.day)}
           onPick={(code) => setCell(sel.id, sel.day, code)}
           onClose={() => setSel(null)}
         />
@@ -589,6 +630,30 @@ export function Cuadrante(props: Props) {
       {toast.view}
       {confirmView}
     </main>
+  );
+}
+
+/** Línea pequeña bajo el turno con lo que fichó de verdad. */
+function ClockLine({ status }: { status: DayStatus & { records: ClockRecord[] } }) {
+  const first = status.records[0];
+  const last = status.records[status.records.length - 1];
+  const span = first ? `${madridTime(first.start)}–${last?.end ? madridTime(last.end) : "…"}` : "";
+  // Texto corto para que quepa en la casilla; el detalle completo va en el título.
+  const map: Record<string, { text: string; cls: string; title: string }> = {
+    ok: { text: `✓ ${span}`, cls: "bg-white/70 text-accent", title: `Fichó ${span}` },
+    late: { text: `Tarde +${status.lateMinutes}′`, cls: "bg-pending-soft text-pending-ink", title: `Fichó ${span}: entró ${status.lateMinutes} min tarde` },
+    early: { text: `Antes −${status.earlyMinutes}′`, cls: "bg-pending-soft text-pending-ink", title: `Fichó ${span}: salió ${status.earlyMinutes} min antes` },
+    open: { text: `● ${first ? madridTime(first.start) : ""}`, cls: "bg-ok-soft text-accent", title: `Trabajando desde las ${first ? madridTime(first.start) : ""}` },
+    forgot: { text: "Sin salida", cls: "bg-danger-soft text-danger-ink", title: "Olvidó fichar la salida" },
+    missing: { text: "No fichó", cls: "bg-danger-soft text-danger-ink", title: "Tenía turno y no fichó" },
+    unplanned: { text: `Fichó ${first ? madridTime(first.start) : ""}`, cls: "bg-pending-soft text-pending-ink", title: `Fichó ${span} sin turno previsto` },
+  };
+  const m = map[status.kind];
+  if (!m) return null;
+  return (
+    <span title={m.title} className={`mt-1 inline-flex w-fit max-w-full truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${m.cls}`}>
+      {m.text}
+    </span>
   );
 }
 
@@ -636,9 +701,9 @@ function FirstSteps({ steps }: { steps: { done: boolean; label: string; detail: 
           return (
             <li key={s.label} className={i === nextIdx ? "" : "hidden sm:block"}>
               {s.href && !s.done ? (
-                <Link href={s.href} className="flex h-full gap-3 rounded-xl border border-line p-3 hover:border-ink">
+                <NavLink href={s.href} className="flex h-full w-full gap-3 rounded-xl border border-line p-3 text-left hover:border-ink">
                   {content}
-                </Link>
+                </NavLink>
               ) : (
                 <div className={`flex h-full gap-3 rounded-xl border p-3 ${s.done ? "border-transparent bg-ground" : "border-line"}`}>{content}</div>
               )}
@@ -657,10 +722,12 @@ function CellEditor(props: {
   absent: AbsenceReason | null;
   monday: string;
   shifts: ShiftCatalog;
+  clock: (DayStatus & { records: ClockRecord[] }) | null;
   onPick: (code: Code) => void;
   onClose: () => void;
 }) {
-  const { sel, employee, current, absent, monday, shifts, onPick, onClose } = props;
+  const { sel, employee, current, absent, monday, shifts, clock, onPick, onClose } = props;
+  const options = [...activeSlots(shifts), ...(current !== FREE && !shifts[current]?.active ? [current] : []), FREE];
   const firstRef = useRef<HTMLButtonElement>(null);
   // El editor solo se abre tras un clic (ya en el navegador), así que window existe.
   const [mobile] = useState(() => window.innerWidth < 640);
@@ -670,8 +737,8 @@ function CellEditor(props: {
   }, []);
 
   // En escritorio, el editor aparece bajo la casilla (o encima, si no cabe).
-  const W = 296;
-  const H = 300;
+  const W = options.length > 4 ? 340 : 296;
+  const H = 110 + Math.ceil(options.length / 2) * 68 + (absent ? 44 : 0) + (clock?.records.length ? 52 : 0);
   const style = mobile
     ? undefined
     : (() => {
@@ -706,20 +773,28 @@ function CellEditor(props: {
             {employee.name} está de {ABSENCE_LABELS[absent].toLowerCase()} este día.
           </p>
         )}
-        <div className="grid grid-cols-2 gap-2">
-          {(["M", "T", "N", "L"] as Code[]).map((code, i) => {
-            const available = code === "L" || (employee.availability[code][sel.day] && !absent);
+        {clock && clock.records.length > 0 && (
+          <div className="mb-3 rounded-lg bg-ground px-3 py-2 text-[13px]">
+            <span className="font-semibold">Fichó:</span>{" "}
+            {clock.records.map((r) => `${madridTime(r.start)}–${r.end ? madridTime(r.end) : r.missingEnd ? "sin salida" : "ahora"}`).join(", ")}
+            <span className="text-ink-muted"> · {formatHours(clock.worked)}</span>
+          </div>
+        )}
+        <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto">
+          {options.map((code, i) => {
+            const def = shifts[code];
+            const available = code === FREE || (Boolean(employee.availability[code]?.[sel.day]) && !absent);
             const isCurrent = current === code;
             return (
               <button
                 key={code}
                 ref={i === 0 ? firstRef : undefined}
                 onClick={() => onPick(code)}
-                className={`flex min-h-[60px] flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left ${isCurrent ? "border-2 border-ink bg-ground" : "border border-line-strong hover:border-ink"}`}
+                className={`flex min-h-[60px] min-w-0 flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left ${isCurrent ? "border-2 border-ink bg-ground" : "border border-line-strong hover:border-ink"}`}
               >
-                <span className="text-[15px] font-semibold">{code === "L" ? "Libre" : shifts[code].label}</span>
+                <span className="truncate text-[15px] font-semibold">{code === FREE ? "Libre" : (def?.label ?? "Franja borrada")}</span>
                 <small className={`text-xs ${available ? "text-ink-muted" : "text-danger-ink"}`}>
-                  {code === "L" ? "No trabaja" : `${shifts[code].start}–${shifts[code].end}${available ? "" : " · no disponible"}`}
+                  {code === FREE ? "No trabaja" : def ? `${def.start}–${def.end}${available ? "" : " · no disponible"}` : ""}
                 </small>
               </button>
             );

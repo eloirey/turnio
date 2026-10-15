@@ -1,8 +1,10 @@
 import "server-only";
 import { addDays, mondayOf, todayInMadrid } from "@/lib/dates";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { franjasToCatalog, snapshotToGrid, type AbsenceReason, type FranjaRow, type Snapshot } from "./mappers";
+import { franjasToCatalog, snapshotToGrid, toClockRecords, type AbsenceReason, type FichajeRow, type FranjaRow, type Snapshot } from "./mappers";
 import { tokenFromPath } from "@/lib/employee-link";
+import { madridToIso } from "@/lib/fichajes";
+
 
 /**
  * Datos para la vista pública del empleado (/h/<token>) y su calendario.
@@ -41,7 +43,7 @@ export async function getEmployeeByToken(param: string): Promise<Me | null> {
 async function loadPublished(me: Me, fromMonday: string, toMonday: string) {
   const db = createAdminClient();
   const [localRes, teamRes, weeksRes, shiftsRes, puestoRes, absRes] = await Promise.all([
-    db.from("locales").select("nombre").eq("id", me.local_id).single(),
+    db.from("locales").select("nombre, fichaje_activo").eq("id", me.local_id).single(),
     db.from("empleados").select("id, nombre, puesto").eq("local_id", me.local_id).eq("activo", true).order("created_at"),
     db
       .from("semanas")
@@ -51,7 +53,7 @@ async function loadPublished(me: Me, fromMonday: string, toMonday: string) {
       .lte("fecha_inicio", toMonday)
       .not("publicado", "is", null)
       .order("fecha_inicio"),
-    db.from("franjas").select("franja, etiqueta, inicio, fin, horas").eq("local_id", me.local_id),
+    db.from("franjas").select("franja, etiqueta, inicio, fin, horas, cierre, orden, activa").eq("local_id", me.local_id),
     db.from("puestos").select("clave, nombre").eq("local_id", me.local_id),
     db
       .from("ausencias")
@@ -73,6 +75,7 @@ async function loadPublished(me: Me, fromMonday: string, toMonday: string) {
 
   return {
     localName: (localRes.data?.nombre as string) ?? "",
+    clockEnabled: Boolean(localRes.data?.fichaje_activo),
     team,
     weeks,
     shifts: franjasToCatalog((shiftsRes.data ?? []) as FranjaRow[]),
@@ -90,7 +93,7 @@ export async function getEmployeeView(token: string) {
   const today = todayInMadrid();
   const thisMonday = mondayOf(today);
 
-  const [data, reqRes] = await Promise.all([
+  const [data, reqRes, clockRes] = await Promise.all([
     loadPublished(me, thisMonday, addDays(thisMonday, 7)),
     db
       .from("solicitudes")
@@ -98,6 +101,13 @@ export async function getEmployeeView(token: string) {
       .eq("empleado_id", me.id)
       .order("created_at", { ascending: false })
       .limit(5),
+    // Fichajes de esta semana y, si lo hay, el tramo que sigue abierto aunque empezara antes.
+    db
+      .from("fichajes")
+      .select("id, empleado_id, entrada, salida, sin_salida, editado")
+      .eq("empleado_id", me.id)
+      .or(`entrada.gte.${madridToIso(thisMonday, "00:00")},and(salida.is.null,sin_salida.is.false)`)
+      .order("entrada"),
   ]);
 
   return {
@@ -105,6 +115,7 @@ export async function getEmployeeView(token: string) {
     token,
     today,
     ...data,
+    clock: toClockRecords((clockRes.data ?? []) as FichajeRow[]),
     requests: (reqRes.data ?? []) as {
       id: string;
       tipo: "librar" | "intercambio";

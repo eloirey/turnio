@@ -2,16 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/feedback";
+import { useIsDemo } from "@/components/nav";
 import { ui } from "@/components/ui";
+import type { LocalSettings } from "@/lib/data/mappers";
+import type { SettingsInput } from "@/lib/forms";
 import { PALETTE, roleStyle, type Role } from "@/lib/roles";
 import type { Rules } from "@/lib/schedule/types";
-import { saveRoles, saveSettings } from "./actions";
+import * as serverActions from "./actions";
+
+export interface SettingsActions {
+  saveSettings: (input: SettingsInput) => Promise<serverActions.Result>;
+  saveRoles: (input: serverActions.RolesInput) => Promise<serverActions.Result>;
+  deleteAccount?: (confirmName: string) => Promise<serverActions.Result>;
+}
 
 interface Props {
   localName: string;
   roles: Role[];
   rules: Rules;
+  settings: LocalSettings;
   usage: Record<string, number>;
+  actions?: SettingsActions;
 }
 
 interface DraftRole {
@@ -22,16 +33,19 @@ interface DraftRole {
   uid: string;
 }
 
-export function AjustesForms({ localName, roles, rules, usage }: Props) {
+export function AjustesForms({ localName, roles, rules, settings, usage, actions = serverActions }: Props) {
   const toast = useToast();
+  const isDemo = useIsDemo();
   return (
     <div className="flex flex-col gap-6">
       {/* La key reinicia cada formulario con los datos del servidor tras guardar
           (así los puestos nuevos reciben su clave y no se duplican). */}
-      <SettingsCard
-        key={`${localName}|${JSON.stringify(rules)}`}
+      <SettingsCards
+        key={`${localName}|${JSON.stringify(rules)}|${JSON.stringify(settings)}`}
         localName={localName}
         rules={rules}
+        settings={settings}
+        save={actions.saveSettings}
         onDone={(m) => toast.show(m)}
         onError={(m) => toast.show({ message: m, tone: "error" })}
       />
@@ -39,71 +53,133 @@ export function AjustesForms({ localName, roles, rules, usage }: Props) {
         key={JSON.stringify(roles)}
         roles={roles}
         usage={usage}
+        save={actions.saveRoles}
         onDone={(m) => toast.show(m)}
         onError={(m) => toast.show({ message: m, tone: "error" })}
       />
+      {!isDemo && actions.deleteAccount && <DangerCard localName={localName} remove={actions.deleteAccount} onError={(m) => toast.show({ message: m, tone: "error" })} />}
       {toast.view}
     </div>
   );
 }
 
-function SettingsCard({ localName, rules, onDone, onError }: { localName: string; rules: Rules; onDone: (m: string) => void; onError: (m: string) => void }) {
+function SettingsCards(props: {
+  localName: string;
+  rules: Rules;
+  settings: LocalSettings;
+  save: SettingsActions["saveSettings"];
+  onDone: (m: string) => void;
+  onError: (m: string) => void;
+}) {
+  const { localName, rules, settings, save, onDone, onError } = props;
   const [nombre, setNombre] = useState(localName);
   const [r, setR] = useState(rules);
+  const [c, setC] = useState(settings);
   const [pending, start] = useTransition();
-  const dirty = nombre !== localName || r.maxConsecutiveNights !== rules.maxConsecutiveNights || r.minRestHours !== rules.minRestHours || r.minDaysOff !== rules.minDaysOff;
+  const dirty = nombre !== localName || JSON.stringify(r) !== JSON.stringify(rules) || JSON.stringify(c) !== JSON.stringify(settings);
 
-  function save() {
+  function submit() {
     start(async () => {
-      const res = await saveSettings({ nombre, ...r });
+      const res = await save({ nombre, ...r, clockIn: c.clockIn, clockMarginMinutes: c.clockMarginMinutes });
       if (res.ok) onDone("Ajustes guardados.");
       else onError(res.error);
     });
   }
 
   return (
-    <section className={`${ui.card} p-6`}>
-      <h2 className={`${ui.h2} mb-5`}>Tu local y reglas</h2>
-      <label className={`${ui.label} mb-6`}>
-        Nombre del local
-        <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={120} className={ui.input} />
-        <span className="text-xs font-normal text-ink-muted">Aparece en los mensajes que reciben tus empleados.</span>
-      </label>
+    <>
+      <section className={`${ui.card} p-6`}>
+        <h2 className={`${ui.h2} mb-5`}>Tu negocio</h2>
+        <label className={ui.label}>
+          Nombre
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={120} className={ui.input} />
+          <span className="text-xs font-normal text-ink-muted">Aparece en los mensajes que reciben tus empleados.</span>
+        </label>
+      </section>
 
-      <div className="flex flex-col divide-y divide-[#EEEBE3]">
-        <RuleRow
-          title="Descanso mínimo entre jornadas"
-          help="El Estatuto de los Trabajadores exige al menos 12 horas."
-          value={r.minRestHours}
-          options={[8, 9, 10, 11, 12, 13, 14]}
-          unit="h"
-          onChange={(v) => setR({ ...r, minRestHours: v })}
-          warn={r.minRestHours < 12 ? "Por debajo de lo que marca la ley. Úsalo solo si tu convenio lo permite." : undefined}
-        />
-        <RuleRow
-          title="Días libres mínimos por semana"
-          help="Lo habitual en hostelería y comercio son 2."
-          value={r.minDaysOff}
-          options={[1, 2, 3]}
-          unit={r.minDaysOff === 1 ? "día" : "días"}
-          onChange={(v) => setR({ ...r, minDaysOff: v })}
-        />
-        <RuleRow
-          title="Máximo de cierres seguidos"
-          help="Noches consecutivas que puede hacer una misma persona."
-          value={r.maxConsecutiveNights}
-          options={[1, 2, 3, 4, 5, 6, 7]}
-          unit={r.maxConsecutiveNights === 1 ? "noche" : "noches"}
-          onChange={(v) => setR({ ...r, maxConsecutiveNights: v })}
-        />
-      </div>
+      <section className={`${ui.card} p-6`}>
+        <h2 className={ui.h2}>Reglas del cuadrante</h2>
+        <p className="mb-4 mt-1 text-sm text-ink-soft">
+          Valen para todo el equipo. Si alguien tiene un acuerdo distinto, cámbiaselo en su ficha (Equipo → Preferencias y reglas propias).
+        </p>
+        <div className="flex flex-col divide-y divide-[#EEEBE3]">
+          <RuleRow
+            title="Descanso mínimo entre jornadas"
+            help="El Estatuto de los Trabajadores exige al menos 12 horas."
+            value={r.minRestHours}
+            options={[0, 8, 9, 10, 11, 12, 13, 14, 16]}
+            unit="h"
+            onChange={(v) => setR({ ...r, minRestHours: v })}
+            warn={r.minRestHours < 12 ? "Por debajo de lo que marca la ley. Úsalo solo si tu convenio lo permite." : undefined}
+          />
+          <RuleRow
+            title="Días libres mínimos por semana"
+            help="Lo habitual en hostelería y comercio son 2."
+            value={r.minDaysOff}
+            options={[0, 1, 2, 3, 4]}
+            unit={r.minDaysOff === 1 ? "día" : "días"}
+            onChange={(v) => setR({ ...r, minDaysOff: v })}
+          />
+          <RuleRow
+            title="Máximo de cierres seguidos"
+            help="Días seguidos en franjas marcadas como cierre (las que acaban tarde)."
+            value={r.maxConsecutiveNights}
+            options={[1, 2, 3, 4, 5, 6, 7]}
+            unit={r.maxConsecutiveNights === 1 ? "cierre" : "cierres"}
+            onChange={(v) => setR({ ...r, maxConsecutiveNights: v })}
+          />
+          <RuleRow
+            title="Horas extra permitidas"
+            help="Horas por semana que el generador puede pasar del contrato si no hay otra forma de cubrir un turno."
+            value={r.maxExtraHours}
+            options={[0, 2, 4, 6, 8, 10, 12, 16, 20]}
+            unit="h"
+            onChange={(v) => setR({ ...r, maxExtraHours: v })}
+          />
+        </div>
+      </section>
 
-      <div className="mt-5 flex justify-end">
-        <button onClick={save} disabled={!dirty || pending} className={`${ui.btn} ${ui.primary}`}>
-          {pending ? "Guardando…" : "Guardar"}
+      <section className={`${ui.card} p-6`}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 className={ui.h2}>Fichaje</h2>
+            <p className="mt-1 max-w-xl text-sm leading-relaxed text-ink-soft">
+              Cada persona ficha la entrada y la salida desde su enlace, sin instalar nada. Tú ves las horas, las incidencias y puedes corregir olvidos.
+              Registrar la jornada es obligatorio en España desde 2019.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={c.clockIn}
+            onClick={() => setC({ ...c, clockIn: !c.clockIn })}
+            className={`relative h-8 w-14 flex-none rounded-full transition ${c.clockIn ? "bg-accent" : "bg-line-strong"}`}
+          >
+            <span className="sr-only">Activar fichaje</span>
+            <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${c.clockIn ? "left-7" : "left-1"}`} />
+          </button>
+        </div>
+        {c.clockIn && (
+          <div className="mt-4 border-t border-[#EEEBE3] pt-2">
+            <RuleRow
+              title="Margen para retrasos"
+              help="Minutos de cortesía antes de marcar que alguien entró tarde o salió antes."
+              value={c.clockMarginMinutes}
+              options={[0, 5, 10, 15, 20, 30]}
+              unit="min"
+              onChange={(v) => setC({ ...c, clockMarginMinutes: v })}
+            />
+          </div>
+        )}
+      </section>
+
+      <div className={`flex items-center justify-end gap-3 rounded-2xl transition ${dirty ? "sticky bottom-4 z-20 bg-ink/90 p-2 shadow-lg backdrop-blur" : "-mt-2"}`}>
+        {dirty && <span className="mr-auto pl-3 text-sm font-medium text-white">Tienes cambios sin guardar</span>}
+        <button onClick={submit} disabled={!dirty || pending} className={`${ui.btn} ${ui.primary}`}>
+          {pending ? "Guardando…" : "Guardar cambios"}
         </button>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -123,16 +199,71 @@ function RuleRow(props: { title: string; help: string; value: number; options: n
             </option>
           ))}
         </select>
-        {props.unit}
+        <span className="w-12">{props.unit}</span>
       </label>
     </div>
+  );
+}
+
+function DangerCard({ localName, remove, onError }: { localName: string; remove: (name: string) => Promise<serverActions.Result>; onError: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [pending, start] = useTransition();
+  return (
+    <section className="rounded-2xl border border-danger/30 bg-surface p-6">
+      <h2 className={ui.h2}>Borrar la cuenta</h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        Se borra tu cuenta y todo lo de «{localName}»: equipo, cuadrantes, fichajes e historial. Los enlaces de tu equipo dejarán de funcionar. No se puede deshacer. Si usas el fichaje, descarga antes el registro de jornada (Fichajes → Exportar a Excel).
+      </p>
+      {!open ? (
+        <button onClick={() => setOpen(true)} className={`${ui.btnSm} ${ui.danger} mt-4`}>
+          Quiero borrar mi cuenta
+        </button>
+      ) : (
+        <div className="mt-4 flex flex-col gap-3">
+          <label className={ui.label}>
+            Para confirmar, escribe «{localName}»
+            <input value={text} onChange={(e) => setText(e.target.value)} className={ui.input} autoComplete="off" />
+          </label>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button onClick={() => setOpen(false)} className={`${ui.btnSm} ${ui.secondary}`}>
+              Cancelar
+            </button>
+            <button
+              onClick={() =>
+                start(async () => {
+                  const res = await remove(text);
+                  if (!res.ok) onError(res.error);
+                })
+              }
+              disabled={pending || text.trim().toLowerCase() !== localName.trim().toLowerCase()}
+              className={`${ui.btnSm} bg-danger text-white hover:bg-danger-ink`}
+            >
+              {pending ? "Borrando…" : "Borrar todo para siempre"}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
 let uidCounter = 0;
 const newUid = () => `n${++uidCounter}`;
 
-function RolesCard({ roles, usage, onDone, onError }: { roles: Role[]; usage: Record<string, number>; onDone: (m: string) => void; onError: (m: string) => void }) {
+function RolesCard({
+  roles,
+  usage,
+  save: saveRoles,
+  onDone,
+  onError,
+}: {
+  roles: Role[];
+  usage: Record<string, number>;
+  save: SettingsActions["saveRoles"];
+  onDone: (m: string) => void;
+  onError: (m: string) => void;
+}) {
   const initial = roles.map((r) => ({ ...r, uid: r.key }));
   const [list, setList] = useState<DraftRole[]>(initial);
   const [pending, start] = useTransition();

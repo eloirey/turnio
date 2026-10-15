@@ -11,6 +11,7 @@ import { getEmployeeView } from "@/lib/data/employee-view";
 import { ABSENCE_LABELS } from "@/lib/data/mappers";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getBaseUrl } from "@/lib/url";
+import { ClockCard } from "./ClockCard";
 import { RequestForm } from "./RequestForm";
 
 export const metadata: Metadata = {
@@ -32,7 +33,10 @@ async function EmployeeSchedule({ params }: { params: Params }) {
   const [view, baseUrl] = await Promise.all([getEmployeeView(token), getBaseUrl()]);
   if (!view) notFound();
 
-  const { me, team, weeks, shifts, today, localName, requests, roleNames, absenceOn } = view;
+  const { me, team, weeks, shifts, today, localName, requests, roleNames, absenceOn, clockEnabled, clock } = view;
+  // Una casilla con una franja que ya no existe se enseña como "Turno".
+  const def = (c: string) => shifts[c] ?? { label: "Turno", start: "", end: "", hours: 0 };
+  const span = (c: string) => (shifts[c] ? `${shifts[c].start} – ${shifts[c].end}` : "Turno");
   const nameOf = new Map(team.map((t) => [t.id, t.nombre]));
   const icsUrl = `${baseUrl}/h/${token}/calendario.ics`;
   const webcalUrl = icsUrl.replace(/^https?:/, "webcal:");
@@ -61,6 +65,16 @@ async function EmployeeSchedule({ params }: { params: Params }) {
         <LogoMark size={34} />
       </header>
 
+      {clockEnabled && (
+        <ClockCard
+          token={view.token}
+          records={clock}
+          now={new Date().toISOString()}
+          today={today}
+          todayShift={todayCode && todayCode !== "L" ? `${def(todayCode).label} · ${span(todayCode)}` : null}
+        />
+      )}
+
       {weeks.length === 0 && (
         <div className={`${ui.card} p-5 text-[15px] leading-relaxed text-ink-soft`}>
           Tu encargado aún no ha publicado el horario. Cuando lo haga, aparecerá aquí. <strong className="text-ink">Guarda este enlace</strong> en tus favoritos o
@@ -73,10 +87,8 @@ async function EmployeeSchedule({ params }: { params: Params }) {
           <div className="text-[13px] font-medium uppercase tracking-[0.08em] opacity-90">Hoy · {longDateLabel(today)}</div>
           {todayCode && todayCode !== "L" ? (
             <>
-              <div className="mt-2 font-display text-[40px] font-bold leading-none tracking-tight">
-                {shifts[todayCode].start} – {shifts[todayCode].end}
-              </div>
-              <div className="mt-2 text-[15px]">{shifts[todayCode].label}</div>
+              <div className="mt-2 font-display text-[40px] font-bold leading-none tracking-tight">{span(todayCode)}</div>
+              <div className="mt-2 text-[15px]">{def(todayCode).label}</div>
               {mates(todayWeek.grid, todayIdx).length > 0 && (
                 <div className="mt-3 border-t border-white/30 pt-3 text-sm">
                   Contigo: {mates(todayWeek.grid, todayIdx).map((m) => `${m.nombre} (${(roleNames[m.puesto] ?? m.puesto).toLowerCase()})`).join(", ")}
@@ -91,7 +103,7 @@ async function EmployeeSchedule({ params }: { params: Params }) {
 
       {weeks.map((w) => {
         const row = w.grid[me.id] ?? [];
-        const total = row.reduce((a, c) => a + (c === "L" ? 0 : shifts[c].hours), 0);
+        const total = row.reduce((a, c) => a + (c === "L" ? 0 : def(c).hours), 0);
         const isThisWeek = w === todayWeek;
         return (
           <section key={w.id} aria-label={`Semana ${weekRangeLabel(w.monday)}`} className="flex flex-col gap-2">
@@ -115,9 +127,9 @@ async function EmployeeSchedule({ params }: { params: Params }) {
                     <b className="text-lg font-semibold text-ink">{dayOfMonth(w.monday, d)}</b>
                   </div>
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-[15px] font-semibold">{c === "L" ? (absence ? ABSENCE_LABELS[absence] : "Libre") : `${shifts[c].start} – ${shifts[c].end}`}</span>
+                    <span className="text-[15px] font-semibold">{c === "L" ? (absence ? ABSENCE_LABELS[absence] : "Libre") : span(c)}</span>
                     <span className="truncate text-[13px] text-ink-muted">
-                      {c === "L" ? (absence ? "Ausencia registrada" : "Día libre") : absence ? `${shifts[c].label} · ⚠ ${ABSENCE_LABELS[absence]} este día` : shifts[c].label}
+                      {c === "L" ? (absence ? "Ausencia registrada" : "Día libre") : absence ? `${def(c).label} · ⚠ ${ABSENCE_LABELS[absence]} este día` : def(c).label}
                       {withMe.length > 0 && ` · con ${withMe.map((m) => m.nombre).join(", ")}`}
                     </span>
                   </div>

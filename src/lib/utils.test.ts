@@ -133,9 +133,30 @@ describe("mappers", () => {
   });
 
   it("convierte las franjas de la base de datos", () => {
-    const cat = franjasToCatalog([{ franja: "N", etiqueta: "Noche", inicio: "18:00:00", fin: "02:00:00", horas: "8.00" }]);
-    expect(cat.N).toEqual({ code: "N", label: "Noche", start: "18:00", end: "02:00", hours: 8 });
-    expect(cat.M.label).toBe("Mañana"); // las que faltan usan el valor por defecto
+    const cat = franjasToCatalog([
+      { franja: "L12", etiqueta: "Línea 12", inicio: "06:00:00", fin: "14:00:00", horas: "8.00", cierre: false, orden: 1, activa: true },
+      { franja: "N", etiqueta: "Noche", inicio: "18:00:00", fin: "02:00:00", horas: "8.00", cierre: true, orden: 0, activa: false },
+    ]);
+    expect(cat.L12).toEqual({ code: "L12", label: "Línea 12", start: "06:00", end: "14:00", hours: 8, closing: false, order: 1, active: true });
+    expect(cat.N).toMatchObject({ closing: true, active: false });
+    expect(cat.M).toBeUndefined(); // solo las del local
+    expect(franjasToCatalog([]).M.label).toBe("Mañana"); // sin franjas, las de por defecto
+  });
+
+  it("disponibilidad y necesidades con franjas propias", () => {
+    const [e] = toEmployees(
+      [{ id: "a", nombre: "Ana", puesto: "conductores", horas_contrato: 40, telefono: null, token_acceso: "t", activo: true, prefiere_librar: [5, 6], min_dias_libres: 3 }],
+      [{ empleado_id: "a", dia: 0, franja: "L12" }],
+      ["L12", "BUHO"],
+    );
+    expect(e.availability.L12[0]).toBe(true);
+    expect(e.availability.BUHO).toEqual([false, false, false, false, false, false, false]);
+    expect(e.preferredDaysOff).toEqual([5, 6]);
+    expect(e.minDaysOff).toBe(3);
+    expect(e.maxConsecutiveClosings).toBeNull();
+    expect(availabilityToRows("a", e.availability)).toEqual([{ empleado_id: "a", dia: 0, franja: "L12" }]);
+    const rows = demandToRows([{ BUHO: { conductores: 2 } }, {}, {}, {}, {}, {}, {}]);
+    expect(rows).toEqual([{ dia: 0, franja: "BUHO", puesto: "conductores", cantidad: 2 }]);
   });
 });
 
@@ -157,7 +178,9 @@ describe("ausencias y reglas desde la base de datos", () => {
       maxConsecutiveNights: 3,
       minRestHours: 12,
       minDaysOff: 2,
+      maxExtraHours: 0,
     });
+    expect(localToRules({ id: "x", nombre: "Bar", max_noches_seguidas: 3, descanso_minimo_horas: 10, min_dias_libres: 1, horas_extra_max: 6 }).maxExtraHours).toBe(6);
   });
 });
 

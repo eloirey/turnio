@@ -1,18 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useConfirm, useToast } from "@/components/feedback";
+import { NavLink, useIsDemo } from "@/components/nav";
 import { ui } from "@/components/ui";
 import { ABSENCE_LABELS, type AbsenceReason, type AusenciaRow, type EmployeeRecord } from "@/lib/data/mappers";
 import { DAY_LONG, DAY_SHORT, rangeLabel, shortDateLabel } from "@/lib/dates";
-import { roleMap, roleStyle, type Role } from "@/lib/roles";
-import { SLOTS, type Slot } from "@/lib/schedule/types";
-import { whatsappLink } from "@/lib/whatsapp";
-import { addAbsence, deleteAbsence, deleteEmployee, saveEmployee } from "./actions";
 import { employeePath } from "@/lib/employee-link";
+import { roleMap, roleStyle, type Role } from "@/lib/roles";
+import { activeSlots, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
+import { whatsappLink } from "@/lib/whatsapp";
+import * as serverActions from "./actions";
 
-const SLOT_LABEL: Record<Slot, string> = { M: "Mañana", T: "Tarde", N: "Noche" };
+export interface EmployeeActions {
+  saveEmployee: typeof serverActions.saveEmployee;
+  deleteEmployee: typeof serverActions.deleteEmployee;
+  addAbsence: typeof serverActions.addAbsence;
+  deleteAbsence: typeof serverActions.deleteAbsence;
+}
 
 interface Draft {
   id?: string;
@@ -21,37 +26,59 @@ interface Draft {
   horasContrato: string;
   telefono: string;
   availability: Record<Slot, boolean[]>;
+  minDaysOff: number | null;
+  maxConsecutiveClosings: number | null;
+  preferredDaysOff: number[];
 }
 
 const allWeek = () => Array<boolean>(7).fill(true);
 
-function newDraft(roles: Role[]): Draft {
-  return { nombre: "", puesto: roles[0]?.key ?? "", horasContrato: "40", telefono: "", availability: { M: allWeek(), T: allWeek(), N: allWeek() } };
+function newDraft(roles: Role[], slots: Slot[]): Draft {
+  return {
+    nombre: "",
+    puesto: roles[0]?.key ?? "",
+    horasContrato: "40",
+    telefono: "",
+    availability: Object.fromEntries(slots.map((s) => [s, allWeek()])),
+    minDaysOff: null,
+    maxConsecutiveClosings: null,
+    preferredDaysOff: [],
+  };
 }
 
-function toDraft(e: EmployeeRecord): Draft {
+function toDraft(e: EmployeeRecord, slots: Slot[]): Draft {
   return {
     id: e.id,
     nombre: e.name,
     puesto: e.role,
     horasContrato: String(e.contractHours),
     telefono: e.phone ?? "",
-    availability: { M: [...e.availability.M], T: [...e.availability.T], N: [...e.availability.N] },
+    availability: Object.fromEntries(slots.map((s) => [s, [...(e.availability[s] ?? Array<boolean>(7).fill(false))]])),
+    minDaysOff: e.minDaysOff ?? null,
+    maxConsecutiveClosings: e.maxConsecutiveClosings ?? null,
+    preferredDaysOff: [...(e.preferredDaysOff ?? [])],
   };
 }
 
 interface Props {
   employees: EmployeeRecord[];
   roles: Role[];
+  shifts: ShiftCatalog;
+  rules: Rules;
   absences: AusenciaRow[];
   today: string;
   baseUrl: string;
   localName: string;
   firstTime: boolean;
+  /** La demo guarda en memoria; la app, en el servidor. */
+  actions?: EmployeeActions;
 }
 
-export function EmpleadosManager({ employees, roles, absences, today, baseUrl, localName, firstTime }: Props) {
-  const [draft, setDraft] = useState<Draft>(() => (employees[0] ? toDraft(employees[0]) : newDraft(roles)));
+export function EmpleadosManager({ employees, roles, shifts, rules, absences, today, baseUrl, localName, firstTime, actions = serverActions }: Props) {
+  const slots = activeSlots(shifts);
+  const isDemo = useIsDemo();
+  const [draft, setDraft] = useState<Draft>(() => (employees[0] ? toDraft(employees[0], slots) : newDraft(roles, slots)));
+  const [showRules, setShowRules] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const toast = useToast();
@@ -65,7 +92,7 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
 
   function select(e: EmployeeRecord | null) {
     setError("");
-    setDraft(e ? toDraft(e) : newDraft(roles));
+    setDraft(e ? toDraft(e, slots) : newDraft(roles, slots));
   }
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -83,13 +110,16 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
   function save() {
     setError("");
     startTransition(async () => {
-      const res = await saveEmployee({
+      const res = await actions.saveEmployee({
         id: draft.id,
         nombre: draft.nombre,
         puesto: draft.puesto,
         horasContrato: Number(draft.horasContrato),
         telefono: draft.telefono,
         availability: draft.availability,
+        minDaysOff: draft.minDaysOff,
+        maxConsecutiveClosings: draft.maxConsecutiveClosings,
+        preferredDaysOff: draft.preferredDaysOff,
       });
       if (!res.ok) return setError(res.error);
       const isNew = !draft.id;
@@ -102,17 +132,17 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
     if (!draft.id) return;
     const ok = await confirm({
       title: `¿Eliminar a ${draft.nombre}?`,
-      body: "Se borrarán también sus turnos, ausencias y solicitudes. Esta acción no se puede deshacer.",
+      body: "Se quitan sus turnos y su enlace deja de funcionar. Si ha fichado alguna vez, su registro de jornada se conserva (la ley obliga a guardarlo 4 años).",
       confirmLabel: "Eliminar",
       danger: true,
     });
     if (!ok) return;
     startTransition(async () => {
-      const res = await deleteEmployee(draft.id!);
+      const res = await actions.deleteEmployee(draft.id!);
       if (!res.ok) return setError(res.error);
-      toast.show(`${draft.nombre} ya no está en el equipo.`);
+      toast.show(res.archived ? `${draft.nombre} ya no está en el equipo. Sus fichajes se conservan.` : `${draft.nombre} ya no está en el equipo.`);
       const rest = employees.filter((e) => e.id !== draft.id);
-      setDraft(rest[0] ? toDraft(rest[0]) : newDraft(roles));
+      setDraft(rest[0] ? toDraft(rest[0], slots) : newDraft(roles, slots));
     });
   }
 
@@ -220,7 +250,7 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
             <p className="mb-4 mt-1 text-sm text-ink-soft">Marca cuándo puede trabajar. El generador nunca le pondrá un turno fuera de lo marcado.</p>
             <div className="overflow-x-auto">
               <div className="flex min-w-[560px] flex-col gap-1.5">
-                <div className="grid grid-cols-[84px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5 text-[13px] font-semibold text-ink-muted">
+                <div className="grid grid-cols-[112px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5 text-[13px] font-semibold text-ink-muted">
                   <span />
                   {DAY_SHORT.map((d) => (
                     <span key={d} className="text-center">
@@ -229,18 +259,26 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
                   ))}
                   <span />
                 </div>
-                {SLOTS.map((slot) => {
-                  const all = draft.availability[slot].every(Boolean);
+                {slots.map((slot) => {
+                  const week = draft.availability[slot] ?? Array<boolean>(7).fill(false);
+                  const all = week.every(Boolean);
                   return (
-                    <div key={slot} className="grid grid-cols-[84px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5">
-                      <span className="text-sm font-semibold">{SLOT_LABEL[slot]}</span>
-                      {draft.availability[slot].map((on, day) => (
+                    <div key={slot} className="grid grid-cols-[112px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5">
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold" title={shifts[slot].label}>
+                          {shifts[slot].label}
+                        </span>
+                        <span className="block text-[11px] text-ink-muted tabular-nums">
+                          {shifts[slot].start}–{shifts[slot].end}
+                        </span>
+                      </span>
+                      {week.map((on, day) => (
                         <button
                           key={day}
                           type="button"
                           role="checkbox"
                           aria-checked={on}
-                          aria-label={`${SLOT_LABEL[slot]} del ${DAY_LONG[day]}`}
+                          aria-label={`${shifts[slot].label} del ${DAY_LONG[day]}`}
                           onClick={() => toggle(slot, day)}
                           className={`flex h-11 items-center justify-center rounded-lg border text-base transition ${on ? "border-accent bg-accent text-white" : "border-line-strong bg-surface text-transparent hover:border-ink"}`}
                         >
@@ -255,6 +293,82 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
                 })}
               </div>
             </div>
+          </div>
+
+          <div className={`${ui.card} p-6`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className={ui.h2}>Preferencias y reglas propias</h2>
+                <p className="mt-1 text-sm text-ink-soft">
+                  {draft.preferredDaysOff.length || draft.minDaysOff !== null || draft.maxConsecutiveClosings !== null
+                    ? summaryOf(draft, rules)
+                    : "Sigue las reglas del negocio. Personalízalas si esta persona tiene un acuerdo distinto."}
+                </p>
+              </div>
+              <button type="button" onClick={() => setShowRules((v) => !v)} aria-expanded={showRules} className={`${ui.btnSm} ${ui.secondary}`}>
+                {showRules ? "Cerrar" : "Personalizar"}
+              </button>
+            </div>
+            {showRules && (
+              <div className="mt-5 flex flex-col gap-5">
+                <div>
+                  <div className="text-sm font-semibold">Prefiere librar</div>
+                  <p className="mb-2 text-[13px] text-ink-muted">El generador intentará darle libre estos días, si se puede cubrir el resto.</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DAY_SHORT.map((d, i) => {
+                      const on = draft.preferredDaysOff.includes(i);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={on}
+                          onClick={() => update("preferredDaysOff", on ? draft.preferredDaysOff.filter((x) => x !== i) : [...draft.preferredDaysOff, i].sort())}
+                          className={`h-11 min-w-14 rounded-lg border px-3 text-sm font-semibold transition ${on ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong text-ink-soft hover:border-ink"}`}
+                        >
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className={ui.label}>
+                    Días libres a la semana
+                    <select
+                      value={draft.minDaysOff ?? ""}
+                      onChange={(e) => update("minDaysOff", e.target.value === "" ? null : Number(e.target.value))}
+                      className={ui.input}
+                    >
+                      <option value="">Como el negocio ({rules.minDaysOff})</option>
+                      {[0, 1, 2, 3, 4, 5, 6].map((n) => (
+                        <option key={n} value={n}>
+                          {n} {n === 1 ? "día" : "días"} como mínimo
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={ui.label}>
+                    Cierres seguidos como máximo
+                    <select
+                      value={draft.maxConsecutiveClosings ?? ""}
+                      onChange={(e) => update("maxConsecutiveClosings", e.target.value === "" ? null : Number(e.target.value))}
+                      className={ui.input}
+                    >
+                      <option value="">Como el negocio ({rules.maxConsecutiveNights})</option>
+                      {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                        <option key={n} value={n}>
+                          {n} {n === 1 ? "cierre" : "cierres"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <p className="text-[13px] text-ink-muted">
+                  ¿Hay días que no puede trabajar nunca? Desmárcalos en la disponibilidad: eso es obligatorio para el generador, no una preferencia.
+                </p>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -277,12 +391,13 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
 
           {current && (
             <>
-              <AbsencesCard employee={current} absences={myAbsences} today={today} onToast={toast.show} confirm={confirm} />
+              <AbsencesCard employee={current} absences={myAbsences} today={today} onToast={toast.show} confirm={confirm} actions={actions} />
 
               <div className={`${ui.card} p-6`}>
                 <h2 className={ui.h2}>Enlace personal</h2>
                 <p className="mb-3 mt-1 text-sm text-ink-soft">
-                  {current.name} verá siempre su horario aquí, sin registrarse, y podrá añadirlo a su calendario del móvil. Envíaselo una vez.
+                  {current.name} verá siempre su horario aquí, sin registrarse, podrá fichar y añadirlo a su calendario del móvil. Envíaselo una vez.
+                  {isDemo && " (En la demo este enlace no funciona.)"}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <code className="min-w-0 flex-1 truncate rounded-lg bg-ground px-3 py-2.5 text-sm">{personalLink}</code>
@@ -304,9 +419,9 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
           {!draft.id && (
             <p className="text-center text-[13px] text-ink-muted">
               ¿Falta algún puesto?{" "}
-              <Link href="/app/ajustes" className="font-semibold text-accent underline-offset-2 hover:underline">
+              <NavLink href="/app/ajustes" className="font-semibold text-accent underline-offset-2 hover:underline">
                 Créalo en Ajustes
-              </Link>
+              </NavLink>
             </p>
           )}
         </section>
@@ -317,14 +432,25 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
   );
 }
 
+/** "Prefiere librar sáb y dom · 3 días libres · 1 cierre seguido" */
+function summaryOf(d: Draft, rules: Rules): string {
+  const parts: string[] = [];
+  if (d.preferredDaysOff.length) parts.push(`Prefiere librar ${d.preferredDaysOff.map((i) => DAY_SHORT[i].toLowerCase()).join(", ")}`);
+  if (d.minDaysOff !== null && d.minDaysOff !== rules.minDaysOff) parts.push(`${d.minDaysOff} ${d.minDaysOff === 1 ? "día libre" : "días libres"} a la semana`);
+  if (d.maxConsecutiveClosings !== null && d.maxConsecutiveClosings !== rules.maxConsecutiveNights)
+    parts.push(`máximo ${d.maxConsecutiveClosings} ${d.maxConsecutiveClosings === 1 ? "cierre seguido" : "cierres seguidos"}`);
+  return parts.length ? parts.join(" · ") + "." : "Sigue las reglas del negocio.";
+}
+
 function AbsencesCard(props: {
   employee: EmployeeRecord;
+  actions: EmployeeActions;
   absences: AusenciaRow[];
   today: string;
   onToast: (t: { message: string; tone?: "info" | "error" } | string) => void;
   confirm: (o: { title: string; body?: string; confirmLabel?: string; danger?: boolean }) => Promise<boolean>;
 }) {
-  const { employee, absences, today, onToast, confirm } = props;
+  const { employee, absences, today, onToast, confirm, actions } = props;
   const [open, setOpen] = useState(false);
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
@@ -334,7 +460,7 @@ function AbsencesCard(props: {
 
   function add() {
     start(async () => {
-      const res = await addAbsence({ empleadoId: employee.id, desde, hasta: hasta < desde ? desde : hasta, motivo, nota });
+      const res = await actions.addAbsence({ empleadoId: employee.id, desde, hasta: hasta < desde ? desde : hasta, motivo, nota });
       if (!res.ok) return onToast({ message: res.error, tone: "error" });
       setOpen(false);
       setNota("");
@@ -346,7 +472,7 @@ function AbsencesCard(props: {
     const ok = await confirm({ title: "¿Borrar esta ausencia?", body: `${ABSENCE_LABELS[a.motivo]}: ${rangeLabel(a.desde, a.hasta)}.`, confirmLabel: "Borrar", danger: true });
     if (!ok) return;
     start(async () => {
-      const res = await deleteAbsence(a.id);
+      const res = await actions.deleteAbsence(a.id);
       onToast(res.ok ? "Ausencia borrada." : { message: res.error, tone: "error" });
     });
   }

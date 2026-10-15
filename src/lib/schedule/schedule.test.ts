@@ -15,17 +15,18 @@ import {
   type Code,
   type ShiftCatalog,
 } from "./index";
-import { starterDemand } from "./templates";
+import { SECTOR_TEMPLATES, templateDemand, templateRoles, templateShifts, templateTeam } from "./templates";
+import type { Employee } from "./types";
 
 describe("reglas: noches seguidas", () => {
   it("detecta 3 noches seguidas cuando el máximo es 2", () => {
-    expect(nightRunViolations(["L", "N", "N", "N", "L", "L", "L"], 2).sort()).toEqual([1, 2, 3]);
+    expect(nightRunViolations(["L", "N", "N", "N", "L", "L", "L"], 2, DEFAULT_SHIFTS).sort()).toEqual([1, 2, 3]);
   });
   it("acepta 2 noches seguidas", () => {
-    expect(nightRunViolations(["N", "N", "L", "N", "N", "L", "L"], 2)).toEqual([]);
+    expect(nightRunViolations(["N", "N", "L", "N", "N", "L", "L"], 2, DEFAULT_SHIFTS)).toEqual([]);
   });
   it("detecta una racha al final de la semana", () => {
-    expect(nightRunViolations(["L", "L", "L", "L", "N", "N", "N"], 2).sort()).toEqual([4, 5, 6]);
+    expect(nightRunViolations(["L", "L", "L", "L", "N", "N", "N"], 2, DEFAULT_SHIFTS).sort()).toEqual([4, 5, 6]);
   });
 });
 
@@ -134,12 +135,29 @@ describe("validador", () => {
 });
 
 describe("plantillas y puestos", () => {
-  it("pone refuerzo del primer puesto las noches de viernes y sábado", () => {
-    const d = starterDemand(["sala", "cocina", "barra"]);
-    expect(d).toHaveLength(7);
-    expect(d[0].N).toEqual({ sala: 1, cocina: 1, barra: 1 });
-    expect(d[4].N).toEqual({ sala: 2, cocina: 1, barra: 1 });
-    expect(starterDemand([])[0]).toEqual({});
+  it("cada plantilla trae puestos, franjas, necesidades y un equipo que las cubre", () => {
+    for (const t of SECTOR_TEMPLATES) {
+      const roles = templateRoles(t);
+      const shifts = templateShifts(t);
+      const demand = templateDemand(t, roles);
+      const team = templateTeam(t, roles);
+      expect(roles.length, t.key).toBeGreaterThan(0);
+      expect(Object.keys(shifts).length, t.key).toBeLessThanOrEqual(8);
+      expect(Object.keys(shifts), t.key).not.toContain("L");
+      for (const s of Object.values(shifts)) expect(s.label.length, t.key).toBeLessThanOrEqual(30);
+      const grid = generateSchedule(team, demand, shifts, DEFAULT_RULES);
+      const missing = findGaps(grid, team, demand, shifts).reduce((a, g) => a + g.missing, 0);
+      expect(missing, `${t.key}: huecos`).toBeLessThanOrEqual(1);
+      expect(findIssues(grid, team, shifts, DEFAULT_RULES), t.key).toEqual([]);
+    }
+  });
+
+  it("un puesto añadido a mano recibe una necesidad básica", () => {
+    const t = SECTOR_TEMPLATES[0];
+    const roles = templateRoles(t, ["Sala", "Cocina", "Barra", "Terraza"]);
+    const demand = templateDemand(t, roles);
+    expect(demand[0][t.shifts[0].code]?.terraza).toBe(1);
+    expect(demand[6][t.shifts[0].code]?.terraza).toBeUndefined();
   });
 
   it("crea claves de puesto únicas y sin tildes", () => {
@@ -147,5 +165,100 @@ describe("plantillas y puestos", () => {
     expect(makeRoleKey("Sala", ["sala"])).toBe("sala-2");
     expect(makeRoleKey("Sala", ["sala", "sala-2"])).toBe("sala-3");
     expect(makeRoleKey("¡¡!!", [])).toBe("puesto");
+  });
+});
+
+// ---------- Franjas libres y reglas por persona ----------
+const BUS: ShiftCatalog = {
+  L12: { code: "L12", label: "Línea 12", start: "06:00", end: "14:00", hours: 8, closing: false, order: 0, active: true },
+  L7: { code: "L7", label: "Línea 7", start: "14:00", end: "22:00", hours: 8, closing: false, order: 1, active: true },
+  BUHO: { code: "BUHO", label: "Búho", start: "22:30", end: "06:30", hours: 8, closing: true, order: 2, active: true },
+  OLD: { code: "OLD", label: "Antigua", start: "08:00", end: "16:00", hours: 8, closing: false, order: 3, active: false },
+};
+const all7 = () => Array(7).fill(true);
+const driver = (id: string, extra: Partial<Employee> = {}): Employee => ({
+  id,
+  name: id,
+  role: "conductores",
+  contractHours: 40,
+  availability: { L12: all7(), L7: all7(), BUHO: all7(), OLD: all7() },
+  ...extra,
+});
+
+describe("franjas con nombre propio", () => {
+  it("genera con códigos de varias letras y respeta el descanso entre ellas", () => {
+    const demand = Array.from({ length: 7 }, () => ({ L12: { conductores: 1 }, L7: { conductores: 1 } }));
+    const team = ["a", "b", "c"].map((id) => driver(id));
+    const grid = generateSchedule(team, demand, BUS, DEFAULT_RULES);
+    expect(findGaps(grid, team, demand, BUS)).toEqual([]);
+    expect(findIssues(grid, team, BUS, DEFAULT_RULES)).toEqual([]);
+  });
+
+  it("los cierres son las franjas marcadas como cierre, se llamen como se llamen", () => {
+    expect(nightRunViolations(["BUHO", "BUHO", "BUHO", "L", "L", "L", "L"], 2, BUS)).toEqual([0, 1, 2]);
+    expect(nightRunViolations(["L7", "L7", "L7", "L7", "L", "L", "L"], 2, BUS)).toEqual([]);
+  });
+
+  it("no usa franjas archivadas aunque sigan en la demanda", () => {
+    const demand = [{ OLD: { conductores: 1 } }, {}, {}, {}, {}, {}, {}];
+    const team = [driver("a")];
+    const grid = generateSchedule(team, demand, BUS, DEFAULT_RULES);
+    expect(grid.a).toEqual(["L", "L", "L", "L", "L", "L", "L"]);
+    expect(findGaps(grid, team, demand, BUS)).toEqual([]);
+  });
+
+  it("una casilla con una franja que ya no existe cuenta 0 horas y no rompe nada", () => {
+    const team = [driver("a")];
+    expect(hoursByEmployee({ a: ["ZZZ", "L", "L", "L", "L", "L", "L"] }, team, BUS).a).toBe(0);
+    expect(() => findIssues({ a: ["ZZZ", "L12", "L", "L", "L", "L", "L"] }, team, BUS, DEFAULT_RULES)).not.toThrow();
+  });
+});
+
+describe("reglas de cada persona", () => {
+  const demand = Array.from({ length: 7 }, () => ({ L12: { conductores: 1 } }));
+
+  it("respeta los días libres propios", () => {
+    const team = [driver("a", { minDaysOff: 4 }), driver("b")];
+    const grid = generateSchedule(team, demand, BUS, DEFAULT_RULES);
+    expect(grid.a.filter((c) => c === "L").length).toBeGreaterThanOrEqual(4);
+    expect(findIssues(grid, team, BUS, DEFAULT_RULES)).toEqual([]);
+  });
+
+  it("avisa si a mano se le quitan días libres propios", () => {
+    const team = [driver("a", { minDaysOff: 3 })];
+    const issues = findIssues({ a: ["L12", "L12", "L12", "L12", "L12", "L", "L"] }, team, BUS, DEFAULT_RULES);
+    expect(issues.map((i) => i.kind)).toContain("too-few-days-off");
+  });
+
+  it("respeta los cierres seguidos propios", () => {
+    const team = [driver("a", { maxConsecutiveClosings: 1 })];
+    const issues = findIssues({ a: ["BUHO", "BUHO", "L", "L", "L", "L", "L"] }, team, BUS, { ...DEFAULT_RULES, minRestHours: 0 });
+    expect(issues.map((i) => i.kind)).toContain("consecutive-nights");
+  });
+
+  it("intenta dar libre los días que cada uno prefiere", () => {
+    const team = [driver("a", { preferredDaysOff: [5, 6] }), driver("b", { preferredDaysOff: [0, 1] })];
+    const grid = generateSchedule(team, demand, BUS, DEFAULT_RULES);
+    expect(grid.a[5]).toBe("L");
+    expect(grid.a[6]).toBe("L");
+    expect(grid.b[0]).toBe("L");
+    expect(grid.b[1]).toBe("L");
+  });
+
+  it("solo usa horas extra si hacen falta y si el local las permite", () => {
+    const team = [driver("a", { contractHours: 24 })];
+    const short = Array.from({ length: 7 }, (_, d) => (d < 4 ? { L12: { conductores: 1 } } : {}));
+    expect(generateSchedule(team, short, BUS, DEFAULT_RULES).a.filter((c) => c !== "L")).toHaveLength(3);
+    const withExtra = generateSchedule(team, short, BUS, { ...DEFAULT_RULES, maxExtraHours: 8 });
+    expect(withExtra.a.filter((c) => c !== "L")).toHaveLength(4);
+    expect(findIssues(withExtra, team, BUS, { ...DEFAULT_RULES, maxExtraHours: 8 })).toEqual([]);
+    expect(findIssues(withExtra, team, BUS, DEFAULT_RULES).map((i) => i.kind)).toContain("over-contract");
+  });
+
+  it("da siempre el mismo cuadrante para los mismos datos", () => {
+    const t = SECTOR_TEMPLATES[0];
+    const roles = templateRoles(t);
+    const args = [templateTeam(t, roles), templateDemand(t, roles), templateShifts(t), DEFAULT_RULES] as const;
+    expect(generateSchedule(...args)).toEqual(generateSchedule(...args));
   });
 });

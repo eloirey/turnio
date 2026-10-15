@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getEmployeeByToken } from "@/lib/data/employee-view";
+import { tokenFromPath } from "@/lib/employee-link";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface RequestState {
@@ -84,4 +85,24 @@ export async function submitRequest(token: string, _prev: RequestState, formData
 
   revalidatePath(`/h/${token}`);
   return { ok: true };
+}
+
+export type PunchResult =
+  | { ok: true; estado: "dentro" | "fuera"; desde?: string; hasta?: string; olvidado: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Fichar entrada o salida desde el enlace personal. La hora la pone la base
+ * de datos (no el móvil), y un doble toque no crea tramos de segundos.
+ */
+export async function punchClock(token: string): Promise<PunchResult> {
+  const me = await getEmployeeByToken(token);
+  if (!me) return { ok: false, error: "Este enlace ya no es válido." };
+  const db = createAdminClient();
+  const { data, error } = await db.rpc("fichar", { p_token: tokenFromPath(token) });
+  if (error) {
+    return { ok: false, error: error.message.includes("no está activado") ? "Tu encargado aún no ha activado el fichaje." : "No se ha podido fichar. Inténtalo de nuevo." };
+  }
+  revalidatePath(`/h/${token}`);
+  return { ok: true, ...(data as { estado: "dentro" | "fuera"; desde?: string; hasta?: string; olvidado: boolean }) };
 }

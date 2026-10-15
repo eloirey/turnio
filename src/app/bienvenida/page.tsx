@@ -26,7 +26,7 @@ export default function BienvenidaPage() {
         <h1 className={ui.h1}>Vamos a preparar tu negocio</h1>
         <p className="mt-2 text-[15px] text-ink-soft">Un minuto y tendrás tu primer cuadrante listo para generar.</p>
       </div>
-      <Suspense fallback={<div className={`${ui.card} h-96 w-full max-w-xl animate-pulse`} />}>
+      <Suspense fallback={<div className={`${ui.card} h-96 w-full max-w-3xl animate-pulse`} />}>
         <Gate />
       </Suspense>
     </main>

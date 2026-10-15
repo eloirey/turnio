@@ -11,11 +11,14 @@ export const metadata = {
 
 const FEATURES = [
   { title: "Se genera solo", text: "Reparte los turnos según lo que necesitas cada día, la disponibilidad y las horas de contrato. Tú solo retocas." },
-  { title: "Cumple los descansos", text: "Avisa si alguien descansa menos de 12 horas entre jornadas o libra menos días de los que toca." },
+  { title: "Cumple los descansos", text: "Avisa si alguien descansa menos de 12 horas entre jornadas, libra menos días de los que toca o encadena demasiados cierres." },
+  { title: "Fichaje desde el móvil", text: "Cada persona ficha entrada y salida desde su enlace. Tú ves las horas reales, corriges olvidos y exportas el mes para la gestoría." },
   { title: "Avisos por WhatsApp", text: "Al publicar, mandas a cada persona su horario con un toque. Sin fotos del Excel perdidas en el grupo." },
+  { title: "A tu medida", text: "Franjas con el nombre que quieras («Línea 12», «Partido»…), puestos propios y reglas distintas para quien las necesite." },
   { title: "En su calendario", text: "Cada empleado se suscribe una vez y sus turnos aparecen solos en el móvil, también cuando cambian." },
   { title: "Cambios ordenados", text: "Quien necesita librar o cambiarse con un compañero lo pide en la app. Tú lo aceptas con un toque." },
   { title: "Vacaciones y bajas", text: "Apunta las ausencias y el generador no asignará turnos esos días." },
+  { title: "Plantillas por sector", text: "Hostelería, comercio, residencias, limpieza, transporte… Empiezas con puestos, franjas y necesidades típicas." },
 ];
 
 const PAINS = [
@@ -25,12 +28,28 @@ const PAINS = [
   ["El sábado falta alguien en barra", "Lo ves en rojo antes de publicar"],
 ];
 
-const SECTORS = ["Bares y restaurantes", "Cafeterías", "Tiendas y comercios", "Residencias", "Gimnasios", "Hoteles y alojamientos"];
+const SECTORS = [
+  "Bares y restaurantes",
+  "Cafeterías y panaderías",
+  "Hoteles",
+  "Tiendas y supermercados",
+  "Residencias",
+  "Clínicas y farmacias",
+  "Gimnasios",
+  "Peluquerías",
+  "Limpieza",
+  "Seguridad",
+  "Almacenes",
+  "Transporte",
+  "Atención al cliente",
+  "Cines y ocio",
+];
 
 const FAQ = [
   ["¿Mis empleados tienen que instalar algo?", "No. Cada persona recibe un enlace personal que se abre en el navegador del móvil. Si quiere, lo añade a su calendario."],
   ["¿Sirve para mi tipo de negocio?", "Sí, si tu equipo trabaja por turnos. Tú defines los puestos (sala, caja, auxiliares…), las franjas horarias y cuánta gente necesitas cada día."],
   ["¿Cumple la normativa laboral?", "Rotafy te avisa de los descansos mínimos entre jornadas, los días libres y las horas de contrato según las reglas que configures. La responsabilidad final del cuadrante sigue siendo de la empresa."],
+  ["¿También sirve para fichar?", "Sí. Si lo activas, cada persona ficha la entrada y la salida desde su enlace, sin instalar nada. La hora la pone Rotafy, no el móvil, y cada corrección queda guardada con su motivo. Puedes exportar el registro del mes en Excel."],
   ["¿Dónde se guardan los datos?", "En servidores de la Unión Europea, con acceso cifrado. Cada negocio solo puede ver sus propios datos."],
   ["¿Cuánto cuesta?", "Ahora mismo es gratis mientras dure el piloto, sin tarjeta. Si en el futuro pasa a ser de pago, te avisaremos antes y podrás decidir con calma."],
 ];

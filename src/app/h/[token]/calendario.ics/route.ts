@@ -16,15 +16,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   const events: IcsEvent[] = [];
   for (const w of weeks) {
     (w.grid[me.id] ?? []).forEach((code, d) => {
-      if (code === "L") return;
       const s = shifts[code];
+      if (code === "L" || !s) return;
       events.push({
         uid: `${w.id}-${me.id}-${d}@rotafy.es`,
         date: addDays(w.monday, d),
         start: s.start,
         end: s.end,
         summary: `${s.label} · ${localName}`,
-        description: `Turno de ${s.label.toLowerCase()} (${s.start}–${s.end}) en ${localName}. Horario publicado con Rotafy.`,
+        description: `Turno «${s.label}» (${s.start}–${s.end}) en ${localName}. Horario publicado con Rotafy.`,
       });
     });
   }

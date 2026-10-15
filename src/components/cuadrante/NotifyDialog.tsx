@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useIsDemo } from "@/components/nav";
 import { ui } from "@/components/ui";
 import { groupScheduleMessage, personalScheduleMessage, shiftLines } from "@/lib/messages";
 import type { Code, ShiftCatalog } from "@/lib/schedule/types";
@@ -31,6 +32,8 @@ interface Props {
  */
 export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, gaps, onClose }: Props) {
   const [sent, setSent] = useState<Set<string>>(new Set());
+  const [preview, setPreview] = useState<string | null>(null);
+  const isDemo = useIsDemo();
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -55,7 +58,9 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
               Publicado. Ahora avisa al equipo
             </h2>
             <p className="mt-1 text-sm text-ink-soft">
-              Cada botón abre WhatsApp con el horario de esa persona ya escrito. Solo tienes que pulsar enviar.
+              {isDemo
+                ? "En la app real, cada botón abre WhatsApp con el horario de esa persona ya escrito. En la demo te enseñamos el mensaje."
+                : "Cada botón abre WhatsApp con el horario de esa persona ya escrito. Solo tienes que pulsar enviar."}
             </p>
             {gaps > 0 && (
               <p className="mt-2 text-sm font-semibold text-danger-ink">
@@ -75,34 +80,55 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
             const lines = shiftLines(e.row, shifts, monday);
             const isSent = sent.has(e.id);
             return (
-              <li key={e.id} className="flex items-center justify-between gap-3 rounded-xl p-3 hover:bg-ground">
-                <div className="min-w-0">
-                  <div className="font-semibold">{e.name}</div>
-                  <div className="truncate text-xs text-ink-muted">
-                    {lines.length ? `${lines.length} turno${lines.length > 1 ? "s" : ""}` : "Libra toda la semana"}
-                    {!e.phone && " · sin teléfono: elegirás el chat en WhatsApp"}
+              <li key={e.id} className="rounded-xl p-3 hover:bg-ground">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold">{e.name}</div>
+                    <div className="truncate text-xs text-ink-muted">
+                      {lines.length ? `${lines.length} turno${lines.length > 1 ? "s" : ""}` : "Libra toda la semana"}
+                      {!e.phone && !isDemo && " · sin teléfono: elegirás el chat en WhatsApp"}
+                    </div>
                   </div>
+                  {isDemo ? (
+                    <button
+                      onClick={() => {
+                        setPreview((p) => (p === e.id ? null : e.id));
+                        setSent((s) => new Set(s).add(e.id));
+                      }}
+                      className={`${ui.btnSm} flex-none ${isSent ? ui.secondary : ui.primary}`}
+                    >
+                      {preview === e.id ? "Ocultar" : "Ver mensaje"}
+                    </button>
+                  ) : (
+                    <a
+                      href={whatsappLink(msg, e.phone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setSent((s) => new Set(s).add(e.id))}
+                      className={`${ui.btnSm} flex-none ${isSent ? ui.secondary : ui.primary}`}
+                    >
+                      {isSent ? "Enviado ✓" : "Enviar"}
+                    </a>
+                  )}
                 </div>
-                <a
-                  href={whatsappLink(msg, e.phone)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setSent((s) => new Set(s).add(e.id))}
-                  className={`${ui.btnSm} flex-none ${isSent ? ui.secondary : ui.primary}`}
-                >
-                  {isSent ? "Enviado ✓" : "Enviar"}
-                </a>
+                {preview === e.id && (
+                  <p className="mt-2 whitespace-pre-line rounded-2xl rounded-bl-sm bg-[#DCF3E2] px-4 py-3 text-sm leading-relaxed text-[#10251C]">{msg}</p>
+                )}
               </li>
             );
           })}
         </ul>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line p-4">
-          <a href={whatsappLink(groupScheduleMessage(localName, monday))} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-accent underline">
-            Avisar también al grupo
-          </a>
+          {isDemo ? (
+            <span className="text-sm text-ink-muted">En la demo no se envía nada.</span>
+          ) : (
+            <a href={whatsappLink(groupScheduleMessage(localName, monday))} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-accent underline">
+              Avisar también al grupo
+            </a>
+          )}
           <span className="text-sm text-ink-muted">
-            {sent.size} de {employees.length} avisados
+            {sent.size} de {employees.length} {isDemo ? "vistos" : "avisados"}
           </span>
         </div>
       </div>

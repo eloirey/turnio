@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Se ejecuta antes de cada petición a /app y /bienvenida:
+ * Se ejecuta antes de cada petición a /app, /bienvenida y /nueva-contrasena:
  *  1. Refresca la sesión de Supabase (renueva el token si ha caducado y
  *     reescribe las cookies). Sin esto, la sesión caducaría a la hora.
  *  2. Si no hay sesión, redirige a /login. Es una comprobación "optimista":
@@ -42,5 +42,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/bienvenida"],
+  matcher: ["/app/:path*", "/bienvenida", "/nueva-contrasena"],
 };

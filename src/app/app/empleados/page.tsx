@@ -16,6 +16,8 @@ async function Content({ searchParams }: { searchParams: Promise<{ nuevo?: strin
     <EmpleadosManager
       employees={bundle.employees}
       roles={bundle.roles}
+      shifts={bundle.shifts}
+      rules={bundle.rules}
       absences={absences}
       today={today}
       baseUrl={baseUrl}
