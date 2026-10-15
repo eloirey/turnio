@@ -1,6 +1,7 @@
 import { addDays } from "@/lib/dates";
 import { getEmployeeCalendar } from "@/lib/data/employee-view";
 import { buildIcs, type IcsEvent } from "@/lib/ics";
+import { shiftTimes } from "@/lib/schedule/rules";
 
 /**
  * Calendario del empleado (.ics). Los móviles se suscriben con webcal:// y lo
@@ -18,13 +19,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     (w.grid[me.id] ?? []).forEach((code, d) => {
       const s = shifts[code];
       if (code === "L" || !s) return;
-      events.push({
-        uid: `${w.id}-${me.id}-${d}@rotafy.es`,
-        date: addDays(w.monday, d),
-        start: s.start,
-        end: s.end,
-        summary: `${s.label} · ${localName}`,
-        description: `Turno «${s.label}» (${s.start}–${s.end}) en ${localName}. Horario publicado con Rotafy.`,
+      // Un turno partido son dos eventos (y el segundo puede acabar al día siguiente).
+      const tramos: [string, string][] = s.start2 && s.end2 ? [[s.start, s.end], [s.start2, s.end2]] : [[s.start, s.end]];
+      tramos.forEach(([start, end], t) => {
+        events.push({
+          uid: `${w.id}-${me.id}-${d}${t ? "-2" : ""}@rotafy.es`,
+          date: addDays(w.monday, d),
+          start,
+          end,
+          summary: `${s.label}${tramos.length > 1 ? (t ? " (2.º tramo)" : " (1.er tramo)") : ""} · ${localName}`,
+          description: `Turno «${s.label}» (${shiftTimes(s)}) en ${localName}. Horario publicado con Rotafy.`,
+        });
       });
     });
   }

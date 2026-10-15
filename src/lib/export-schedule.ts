@@ -13,6 +13,7 @@ import {
 } from "@/lib/dates";
 import type { Table } from "@/lib/export-table";
 import type { Role } from "@/lib/roles";
+import { shiftTimes, spanHours } from "@/lib/schedule/rules";
 import {
   activeSlots,
   FREE,
@@ -71,7 +72,7 @@ export function gridRows(input: ScheduleExportInput): GridRow[] {
         hours += s.hours;
         return {
           kind: "shift",
-          text: `${s.label}\n${s.start}–${s.end}`,
+          text: `${s.label}\n${shiftTimes(s)}`,
           roleColor: roles.find((r) => r.key === e.role)?.color,
           slot: code,
         };
@@ -114,21 +115,25 @@ export function shiftRows(input: ScheduleExportInput): ShiftRow[] {
       const s = code !== FREE ? shifts[code] : undefined;
       if (!s) return;
       const date = addDays(monday, d);
-      rows.push({
-        o: order.indexOf(code) === -1 ? 99 : order.indexOf(code),
-        d,
-        row: {
-          date,
-          dateEs: `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`,
-          day: DAY_LONG[d],
-          person: e.name,
-          role: roleName(roles, e.role),
-          slot: s.label,
-          start: s.start,
-          end: s.end,
-          hours: s.hours,
-        },
-      });
+      // Un turno partido sale en dos filas, una por tramo, con sus horas.
+      const tramos: [string, string][] = s.start2 && s.end2 ? [[s.start, s.end], [s.start2, s.end2]] : [[s.start, s.end]];
+      tramos.forEach(([start, end], t) =>
+        rows.push({
+          o: (order.indexOf(code) === -1 ? 99 : order.indexOf(code)) + t / 10,
+          d,
+          row: {
+            date,
+            dateEs: `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`,
+            day: DAY_LONG[d],
+            person: e.name,
+            role: roleName(roles, e.role),
+            slot: tramos.length > 1 ? `${s.label} (${t + 1}.º tramo)` : s.label,
+            start,
+            end,
+            hours: tramos.length > 1 ? spanHours(start, end) : s.hours,
+          },
+        }),
+      );
     });
   }
   rows.sort(
@@ -166,7 +171,7 @@ export function dayRows(input: ScheduleExportInput): DayRow[] {
         rows.push({
           day: `${DAY_SHORT[d]} ${dayOfMonth(monday, d)}`,
           slot: s.label,
-          time: `${s.start}–${s.end}`,
+          time: shiftTimes(s),
           role: role.name,
           people,
           needed: demand ? needed : null,

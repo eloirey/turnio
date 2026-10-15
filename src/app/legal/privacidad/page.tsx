@@ -23,7 +23,7 @@ export default function PrivacidadPage() {
       <ul>
         <li>
           <strong>Del encargado o titular de la cuenta:</strong> email y contraseña (cifrada) para acceder —o los datos básicos de tu cuenta de Google si entras
-          con ella—, y el nombre del negocio.
+          con ella—, y el nombre del negocio. Si el titular invita a otros encargados, también el email con el que entra cada uno.
         </li>
         <li>
           <strong>De los empleados</strong>, introducidos por la empresa: nombre, puesto, horas de contrato, disponibilidad, teléfono (opcional), turnos asignados,
@@ -31,7 +31,17 @@ export default function PrivacidadPage() {
         </li>
         <li>
           <strong>Registro de jornada</strong> (si la empresa activa el fichaje): hora de entrada y salida de cada tramo trabajado y, si el encargado corrige un
-          fichaje, la hora original, la nueva y el motivo. No se guarda la ubicación.
+          fichaje, la hora original, la nueva y el motivo.
+        </li>
+        <li>
+          <strong>Comprobación del lugar al fichar</strong> (solo si la empresa la activa): en el momento de fichar, el móvil del empleado envía su posición o se
+          mira la red wifi desde la que ficha, para saber si está en el local. <strong>Las coordenadas no se guardan</strong>: solo queda el resultado («en el
+          local», «fuera del local», «teletrabajo» o «sin datos») y, si estaba fuera, la distancia aproximada. No hay seguimiento continuo: solo se consulta al
+          pulsar el botón de fichar, y el navegador siempre pide permiso antes. La empresa debe informar a su plantilla de esta medida (art. 90 LOPDGDD).
+        </li>
+        <li>
+          <strong>Avisos en el móvil</strong> (si cada persona los activa): la dirección técnica que da el navegador para poder enviar notificaciones a ese
+          dispositivo. Se borra al desactivarlos o cuando el navegador deja de aceptarlos.
         </li>
       </ul>
 
@@ -60,7 +70,11 @@ export default function PrivacidadPage() {
           contractuales tipo de la Comisión Europea y/o el Marco de Privacidad de Datos UE-EE. UU.
         </li>
       </ul>
-      <p>Los mensajes de WhatsApp los envía el propio encargado desde su teléfono: Rotafy no los envía ni los almacena.</p>
+      <p>Los mensajes de WhatsApp o Telegram los envía el propio encargado desde su teléfono: Rotafy no los envía ni los almacena.</p>
+      <p>
+        Los avisos en el móvil se entregan a través del servicio de notificaciones del propio navegador (Google, Apple o Mozilla, según el dispositivo), que solo
+        recibe el texto del aviso cifrado.
+      </p>
 
       <h2>6. Cuánto tiempo los guardamos</h2>
       <p>

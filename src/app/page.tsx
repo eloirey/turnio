@@ -22,21 +22,22 @@ const PAINS = [
 ];
 
 const MORE = [
-  { icon: "bell", title: "Avisos al momento", text: "Una campanita para ti y otra para cada empleado: solicitudes, horarios publicados, olvidos de fichaje." },
+  { icon: "bell", title: "Avisos en el móvil", text: "Una campanita para ti y otra para cada empleado, y si queréis, notificación en el móvil al momento." },
   { icon: "send", title: "WhatsApp o Telegram", text: "Mandas a cada uno su horario con un toque, por la app que uséis. Si cambia, solo a quien le afecta." },
   { icon: "sheet", title: "Exporta a Excel", text: "El cuadrante con colores, por día o en lista para la gestoría. Y los fichajes del mes." },
   { icon: "swap", title: "Cambios ordenados", text: "Quien quiere librar o cambiarse lo pide desde su enlace. Tú aceptas con un toque." },
   { icon: "plane", title: "Vacaciones y bajas", text: "Apúntalas y el generador no pondrá turnos esos días." },
-  { icon: "copy", title: "Copia la semana pasada", text: "Si tu horario se repite, empieza desde la anterior y retoca." },
+  { icon: "team", title: "Varios encargados", text: "Invita a quien te ayuda con un enlace. Cada uno entra con su cuenta y lo quitas cuando quieras." },
   { icon: "compass", title: "Ayuda en cada pantalla", text: "Dudas resueltas donde estás y una guía paso a paso para empezar." },
   { icon: "lock", title: "Tus datos, en Europa", text: "Acceso cifrado y cada negocio solo ve lo suyo. Entra con email o con Google." },
 ] as const;
 
 const FAQ = [
-  ["¿Mis empleados tienen que instalar algo?", "No. Cada persona recibe un enlace personal que se abre en el navegador del móvil. Ahí ve su horario, ficha y, si quiere, lo añade a su calendario."],
+  ["¿Mis empleados tienen que instalar algo?", "No. Cada persona recibe un enlace personal que se abre en el navegador del móvil. Ahí ve su horario, ficha, descarga su registro y, si quiere, lo añade a su calendario o activa los avisos."],
   ["¿Sirve para mi tipo de negocio?", "Sí, si tu equipo trabaja por turnos. Empiezas con una plantilla de tu sector o, si no está, desde cero: tú pones los puestos, las franjas (con el nombre y horario que uséis) y cuánta gente necesitas cada día."],
   ["¿Cumple la normativa laboral?", "Rotafy aplica los descansos entre jornadas, los días libres, los cierres seguidos y las horas extra que configures, también reglas distintas por persona. La responsabilidad final del cuadrante sigue siendo de la empresa."],
   ["¿Sirve como registro de jornada?", "Sí. Cada persona ficha entrada y salida desde su enlace; la hora la pone el servidor, no el móvil. Las correcciones quedan guardadas con su motivo y la hora original, y exportas cada mes en Excel para la gestoría o la Inspección."],
+  ["¿Puedo saber si fichan desde el local?", "Sí, si lo activas. Al fichar se mira el GPS del móvil o la wifi del local y tú eliges si solo te avisa o si no deja fichar desde fuera. No se guarda la ubicación, solo si estaba en el local, y a quien teletrabaja le dejas fichar desde casa."],
   ["¿Rotafy guarda los fichajes por mí?", "Los mantiene mientras tengas la cuenta, pero Rotafy no es un archivo: conservar el registro cuatro años es obligación de tu empresa. Descarga el Excel cada mes (un clic) y guárdalo tú o mándalo a tu gestoría."],
   ["¿Cómo se enteran de los cambios de horario?", "Cuando vuelves a publicar, a quien le cambia algo le llega un aviso en su enlace y, si quieres, un mensaje por WhatsApp o Telegram que empieza con «Ha cambiado tu horario». Al resto no hace falta escribirles."],
   ["¿Qué pasa si un empleado comparte su enlace?", "El enlace es único para cada persona. Si lo pierde o lo comparte, lo cambias con un toque y el anterior deja de funcionar al momento."],
@@ -90,7 +91,7 @@ export default function Home() {
                 className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-surface/80 py-1 pl-1 pr-3 text-[13px] font-medium text-accent-ink shadow-sm backdrop-blur hover:border-accent/40"
               >
                 <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">Nuevo</span>
-                Avisos al momento y exportar a Excel <span aria-hidden>→</span>
+                Avisos en el móvil y varios encargados <span aria-hidden>→</span>
               </a>
               <h1 className="font-display text-[42px] font-bold leading-[1.08] tracking-[-0.03em] sm:text-[64px]">
                 El cuadrante de la semana en{" "}
@@ -213,6 +214,7 @@ export default function Home() {
                 <ul className="mt-8 grid gap-4">
                   {[
                     ["Hora del servidor", "No vale cambiar la hora del móvil."],
+                    ["Desde el local", "Comprueba que fichan en el local (o en su día de teletrabajo), sin guardar dónde están."],
                     ["Olvidos resueltos", "Si alguien no ficha la salida, lo corriges y queda guardado el motivo y la hora original."],
                     ["Horas reales de cada uno", "Totales por semana y quién está trabajando ahora."],
                     ["Excel para la gestoría", "El registro del mes en un clic, para guardar tu copia o enseñarlo a la Inspección."],
@@ -441,10 +443,12 @@ function FeatureIcon({ name }: { name: (typeof MORE)[number]["icon"] }) {
       </>
     ),
     swap: <path d="M4 8h14l-4-4M18 14H4l4 4" />,
-    copy: (
+    team: (
       <>
-        <rect x="7" y="7" width="12" height="12" rx="2" />
-        <path d="M15 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2h2" />
+        <circle cx="8" cy="8" r="3" />
+        <path d="M2.5 18a5.5 5.5 0 0111 0" />
+        <circle cx="15.5" cy="7" r="2.5" />
+        <path d="M15 12.5a4.5 4.5 0 014.5 4.5" />
       </>
     ),
     compass: (

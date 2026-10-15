@@ -137,7 +137,7 @@ describe("mappers", () => {
       { franja: "L12", etiqueta: "Línea 12", inicio: "06:00:00", fin: "14:00:00", horas: "8.00", cierre: false, orden: 1, activa: true },
       { franja: "N", etiqueta: "Noche", inicio: "18:00:00", fin: "02:00:00", horas: "8.00", cierre: true, orden: 0, activa: false },
     ]);
-    expect(cat.L12).toEqual({ code: "L12", label: "Línea 12", start: "06:00", end: "14:00", hours: 8, closing: false, order: 1, active: true });
+    expect(cat.L12).toEqual({ code: "L12", label: "Línea 12", start: "06:00", end: "14:00", start2: null, end2: null, hours: 8, closing: false, order: 1, active: true });
     expect(cat.N).toMatchObject({ closing: true, active: false });
     expect(cat.M).toBeUndefined(); // solo las del local
     expect(franjasToCatalog([]).M.label).toBe("Mañana"); // sin franjas, las de por defecto

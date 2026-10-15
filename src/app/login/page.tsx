@@ -8,14 +8,24 @@ import { LoginForm } from "./LoginForm";
 
 export const metadata = { title: "Entrar · Rotafy" };
 
-type Search = Promise<{ error?: string }>;
+type Search = Promise<{ error?: string; invitacion?: string }>;
 
 /** Google aparece cuando está configurado en Supabase (variable NEXT_PUBLIC_AUTH_GOOGLE=1). */
 const googleEnabled = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
 
 async function Form({ searchParams }: { searchParams: Search }) {
-  const { error } = await searchParams;
-  return <LoginForm googleEnabled={googleEnabled} initialError={error} />;
+  const { error, invitacion } = await searchParams;
+  const invite = invitacion && /^[0-9a-f]{32}$/.test(invitacion) ? invitacion : undefined;
+  return (
+    <>
+      {invite && (
+        <p className="w-full max-w-md rounded-xl bg-accent-soft px-4 py-3 text-center text-sm text-accent-ink">
+          Entra o crea tu cuenta para aceptar la invitación como encargado.
+        </p>
+      )}
+      <LoginForm googleEnabled={googleEnabled} initialError={error} invite={invite} />
+    </>
+  );
 }
 
 export default function LoginPage({ searchParams }: { searchParams: Search }) {

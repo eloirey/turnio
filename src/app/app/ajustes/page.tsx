@@ -8,7 +8,7 @@ export const metadata = { title: "Ajustes · Rotafy" };
 async function Content() {
   const { local, roles, rules, settings, employees } = await requireLocal();
   const usage = Object.fromEntries(roles.map((r) => [r.key, employees.filter((e) => e.role === r.key).length]));
-  return <AjustesForms localName={local.nombre} roles={roles} rules={rules} settings={settings} usage={usage} />;
+  return <AjustesForms localName={local.nombre} roles={roles} rules={rules} settings={settings} usage={usage} isOwner={local.es_dueno !== false} />;
 }
 
 export default function AjustesPage() {

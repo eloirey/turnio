@@ -1,6 +1,7 @@
 import "server-only";
 import { addDays, mondayOf, todayInMadrid } from "@/lib/dates";
 import { AVISO_COLUMNS, toAvisos, type AvisoRow } from "@/lib/avisos";
+import { checksPlace, madridWeekday, type LocalPlaceConfig } from "@/lib/clock-place";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { franjasToCatalog, snapshotToGrid, toClockRecords, type AbsenceReason, type FichajeRow, type FranjaRow, type Snapshot } from "./mappers";
 import { tokenFromPath } from "@/lib/employee-link";
@@ -25,6 +26,7 @@ interface Me {
   nombre: string;
   puesto: string;
   local_id: string;
+  teletrabajo_dias: number[] | null;
 }
 
 /** Acepta el enlace con nombre ("laura-<token>") o solo el token. */
@@ -34,7 +36,7 @@ export async function getEmployeeByToken(param: string): Promise<Me | null> {
   const db = createAdminClient();
   const { data } = await db
     .from("empleados")
-    .select("id, nombre, puesto, local_id")
+    .select("id, nombre, puesto, local_id, teletrabajo_dias")
     .eq("token_acceso", token)
     .eq("activo", true)
     .maybeSingle();
@@ -44,7 +46,7 @@ export async function getEmployeeByToken(param: string): Promise<Me | null> {
 async function loadPublished(me: Me, fromMonday: string, toMonday: string) {
   const db = createAdminClient();
   const [localRes, teamRes, weeksRes, shiftsRes, puestoRes, absRes] = await Promise.all([
-    db.from("locales").select("nombre, fichaje_activo").eq("id", me.local_id).single(),
+    db.from("locales").select("nombre, fichaje_activo, fichaje_control, fichaje_lat, fichaje_lng, fichaje_radio_m, fichaje_ips").eq("id", me.local_id).single(),
     db.from("empleados").select("id, nombre, puesto").eq("local_id", me.local_id).eq("activo", true).order("created_at"),
     db
       .from("semanas")
@@ -54,7 +56,7 @@ async function loadPublished(me: Me, fromMonday: string, toMonday: string) {
       .lte("fecha_inicio", toMonday)
       .not("publicado", "is", null)
       .order("fecha_inicio"),
-    db.from("franjas").select("franja, etiqueta, inicio, fin, horas, cierre, orden, activa").eq("local_id", me.local_id),
+    db.from("franjas").select("franja, etiqueta, inicio, fin, inicio2, fin2, horas, cierre, orden, activa").eq("local_id", me.local_id),
     db.from("puestos").select("clave, nombre").eq("local_id", me.local_id),
     db
       .from("ausencias")
@@ -77,6 +79,11 @@ async function loadPublished(me: Me, fromMonday: string, toMonday: string) {
   return {
     localName: (localRes.data?.nombre as string) ?? "",
     clockEnabled: Boolean(localRes.data?.fichaje_activo),
+    /** ¿Se comprueba desde dónde ficha? (hoy en teletrabajo, no) */
+    clockPlace: {
+      checks: checksPlace(placeConfig(localRes.data)),
+      remoteToday: (me.teletrabajo_dias ?? []).includes(madridWeekday()),
+    },
     team,
     weeks,
     shifts: franjasToCatalog((shiftsRes.data ?? []) as FranjaRow[]),
@@ -138,4 +145,15 @@ export async function getEmployeeCalendar(token: string) {
   const thisMonday = mondayOf(todayInMadrid());
   const data = await loadPublished(me, addDays(thisMonday, -28), addDays(thisMonday, 28));
   return { me, ...data };
+}
+
+/** Configuración de «dónde se ficha» de una fila de locales. */
+export function placeConfig(row: Record<string, unknown> | null | undefined): LocalPlaceConfig {
+  return {
+    control: (row?.fichaje_control as LocalPlaceConfig["control"]) ?? "no",
+    lat: (row?.fichaje_lat as number | null) ?? null,
+    lng: (row?.fichaje_lng as number | null) ?? null,
+    radius: (row?.fichaje_radio_m as number) ?? 200,
+    ips: (row?.fichaje_ips as string[]) ?? [],
+  };
 }

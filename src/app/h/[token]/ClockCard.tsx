@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { formatHours, madridDate, madridTime, recordHours, type ClockRecord } from "@/lib/fichajes";
+import type { Position } from "@/lib/clock-place";
 import { punchClock } from "./actions";
 
 interface Props {
@@ -13,10 +14,25 @@ interface Props {
   today: string;
   /** "Noche · 17:00–01:00" si hoy tiene turno. */
   todayShift: string | null;
+  /** Si el local comprueba desde dónde se ficha (y si hoy teletrabaja). */
+  place?: { checks: boolean; remoteToday: boolean };
+}
+
+/** Pide la ubicación al móvil (solo para comprobar que está en el local). */
+function currentPosition(): Promise<Position | null> {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    );
+  });
 }
 
 /** Botón grande para fichar entrada y salida desde el móvil. */
-export function ClockCard({ token, records: initial, now: serverNow, today, todayShift }: Props) {
+export function ClockCard({ token, records: initial, now: serverNow, today, todayShift, place }: Props) {
+  const askLocation = Boolean(place?.checks && !place.remoteToday);
   const [records, setRecords] = useState(initial);
   const [now, setNow] = useState(() => new Date(serverNow));
   const [confirmOut, setConfirmOut] = useState(false);
@@ -52,7 +68,8 @@ export function ClockCard({ token, records: initial, now: serverNow, today, toda
     if (open && !confirmOut) return setConfirmOut(true);
     setConfirmOut(false);
     start(async () => {
-      const res = await punchClock(token);
+      const position = askLocation ? await currentPosition() : null;
+      const res = await punchClock(token, position);
       if (!res.ok) return setMessage({ text: res.error, tone: "error" });
       const at = new Date();
       if (res.estado === "dentro") {
@@ -64,12 +81,18 @@ export function ClockCard({ token, records: initial, now: serverNow, today, toda
         setMessage(
           res.olvidado
             ? { text: `Entrada registrada a las ${madridTime(start)}. La última vez no fichaste la salida: tu encargado lo revisará.`, tone: "warn" }
-            : { text: `Entrada registrada a las ${madridTime(start)}. ¡Buen turno!`, tone: "ok" },
+            : res.place === "fuera"
+              ? { text: `Entrada registrada a las ${madridTime(start)}, pero fuera del local: tu encargado lo verá.`, tone: "warn" }
+              : { text: `Entrada registrada a las ${madridTime(start)}. ¡Buen turno!`, tone: "ok" },
         );
       } else {
         const end = res.hasta ?? at.toISOString();
         setRecords((rs) => rs.map((r) => (!r.end && !r.missingEnd ? { ...r, end } : r)));
-        setMessage({ text: `Salida registrada a las ${madridTime(end)}. ¡Hasta la próxima!`, tone: "ok" });
+        setMessage(
+          res.place === "fuera"
+            ? { text: `Salida registrada a las ${madridTime(end)}, pero fuera del local: tu encargado lo verá.`, tone: "warn" }
+            : { text: `Salida registrada a las ${madridTime(end)}. ¡Hasta la próxima!`, tone: "ok" },
+        );
       }
       setNow(new Date());
     });
@@ -119,6 +142,11 @@ export function ClockCard({ token, records: initial, now: serverNow, today, toda
             }`}
           >
             {message.text}
+          </p>
+        )}
+        {place?.checks && (
+          <p className={`mt-3 text-[13px] leading-snug ${open ? "text-white/70" : "text-ink-muted"}`}>
+            {place.remoteToday ? "🏠 Hoy teletrabajas: puedes fichar desde cualquier sitio." : "📍 Al fichar se comprueba que estás en el local. Tu ubicación no se guarda."}
           </p>
         )}
         {!message && forgot && (

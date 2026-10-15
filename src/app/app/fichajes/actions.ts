@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { deliverPush } from "@/lib/push";
 import { z } from "zod";
 import { addDays, isValidISODate, todayInMadrid } from "@/lib/dates";
 import { getClockPeriod, requireLocal } from "@/lib/data/queries";
 import { dayStatus, groupByEmployeeDay, madridToIso, type ClockDayRow } from "@/lib/fichajes";
+import { shiftTimes } from "@/lib/schedule/rules";
 import { timeField } from "@/lib/forms";
 import { toHours } from "@/lib/schedule/rules";
 import { createClient } from "@/lib/supabase/server";
@@ -61,6 +64,7 @@ export async function saveClock(input: ClockInput): Promise<Result> {
   });
   if (error) return { ok: false, error: friendly(error.message) };
   revalidatePath("/app", "layout");
+  after(() => deliverPush().catch(() => undefined));
   return { ok: true };
 }
 
@@ -73,6 +77,7 @@ export async function deleteClock(id: string, why: string): Promise<Result> {
   const { error } = await supabase.rpc("borrar_fichaje", { p_id: id, p_motivo: r.data });
   if (error) return { ok: false, error: friendly(error.message) };
   revalidatePath("/app", "layout");
+  after(() => deliverPush().catch(() => undefined));
   return { ok: true };
 }
 
@@ -113,7 +118,7 @@ export async function exportClock(month: string): Promise<ExportResult> {
         name: p.name,
         role: p.role,
         records,
-        planned: shift ? `${shift.label} ${shift.start}–${shift.end}` : "",
+        planned: shift ? `${shift.label} ${shiftTimes(shift)}` : "",
         plannedHours: shift?.hours ?? 0,
         status: status.kind,
         lastReason: reasonOf ? lastReason.get(reasonOf.id) : undefined,

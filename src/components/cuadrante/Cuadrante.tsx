@@ -9,6 +9,7 @@ import { addDays, DAY_LONG, DAY_SHORT, dayOfMonth, isoWeekNumber, weekRangeLabel
 import { dayStatus, formatHours, groupByEmployeeDay, madridTime, recordHours, type ClockRecord, type DayStatus } from "@/lib/fichajes";
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import { emptyGrid, findGaps, findIssues, generateSchedule, hoursByEmployee } from "@/lib/schedule";
+import { shiftTimes } from "@/lib/schedule/rules";
 import { activeSlots, FREE, type AbsenceMap, type Code, type Demand, type Employee, type Grid, type IssueKind, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
 import { emitCuadranteEvent } from "@/components/guide/GuidePanel";
 import { ExportDialog } from "./ExportDialog";
@@ -313,9 +314,11 @@ export function Cuadrante(props: Props) {
   const fmt = (c: Slot) => {
     const s = shifts[c];
     if (!s) return "Turno";
-    if (s.start.endsWith(":00") && s.end.endsWith(":00")) return `${s.start.slice(0, 2)}–${s.end.slice(0, 2)} h`;
     const short = (t: string) => t.replace(/^0/, "");
-    return `${short(s.start)}–${short(s.end)}`;
+    const tramo = (a: string, b: string) => (a.endsWith(":00") && b.endsWith(":00") ? `${a.slice(0, 2)}–${b.slice(0, 2)}` : `${short(a)}–${short(b)}`);
+    // Partido: "12–16 / 20–24"
+    if (s.start2 && s.end2) return `${tramo(s.start, s.end)} / ${tramo(s.start2, s.end2)}`;
+    return s.start.endsWith(":00") && s.end.endsWith(":00") ? `${tramo(s.start, s.end)} h` : tramo(s.start, s.end);
   };
   const labelOf = (c: Slot) => shifts[c]?.label ?? "Franja borrada";
 
@@ -593,7 +596,17 @@ export function Cuadrante(props: Props) {
                             <strong className="text-sm font-semibold">{absent ? ABSENCE_LABELS[absent] : "Libre"}</strong>
                           ) : (
                             <>
-                              <strong className="whitespace-nowrap text-[15px] font-semibold">{fmt(c)}</strong>
+                              {shifts[c]?.start2 ? (
+                                <strong className="whitespace-nowrap text-[13px] font-semibold leading-tight">
+                                  {fmt(c).split(" / ").map((t, k) => (
+                                    <span key={k} className="block">
+                                      {k ? `y ${t}` : t}
+                                    </span>
+                                  ))}
+                                </strong>
+                              ) : (
+                                <strong className="whitespace-nowrap text-[15px] font-semibold">{fmt(c)}</strong>
+                              )}
                               <span className={`truncate ${absent ? "font-semibold text-danger-ink" : "opacity-80"}`}>{absent ? `⚠ ${ABSENCE_LABELS[absent]}` : labelOf(c)}</span>
                             </>
                           )}
@@ -890,7 +903,7 @@ function CellEditor(props: {
               >
                 <span className="truncate text-[15px] font-semibold">{code === FREE ? "Libre" : (def?.label ?? "Franja borrada")}</span>
                 <small className={`text-xs ${available ? "text-ink-muted" : "text-danger-ink"}`}>
-                  {code === FREE ? "No trabaja" : def ? `${def.start}–${def.end}${available ? "" : " · no disponible"}` : ""}
+                  {code === FREE ? "No trabaja" : def ? `${shiftTimes(def)}${available ? "" : " · no disponible"}` : ""}
                 </small>
               </button>
             );
@@ -967,9 +980,7 @@ function PrintSchedule(props: {
                     <td key={d} className="border border-line px-1.5 py-1.5 text-center" style={s ? color : undefined}>
                       {s ? (
                         <>
-                          <div className="font-semibold">
-                            {s.start}–{s.end}
-                          </div>
+                          <div className="font-semibold">{shiftTimes(s)}</div>
                           <div className="truncate text-[8pt]">{s.label}</div>
                         </>
                       ) : away ? (

@@ -8,7 +8,7 @@ import { ui } from "@/components/ui";
 import { DAY_SHORT } from "@/lib/dates";
 import type { NecesidadesInput } from "@/lib/forms";
 import type { Role } from "@/lib/roles";
-import { spanHours } from "@/lib/schedule/rules";
+import { shiftHours, shiftTimes, spanHours } from "@/lib/schedule/rules";
 import { activeSlots, MAX_SLOTS, type Demand, type ShiftCatalog } from "@/lib/schedule/types";
 import { saveNecesidades, type SaveResult } from "./actions";
 
@@ -17,6 +17,9 @@ interface ShiftRow {
   label: string;
   start: string;
   end: string;
+  /** Turno partido: segundo tramo (vacío si no lo es). */
+  start2: string;
+  end2: string;
   closing: boolean;
 }
 
@@ -36,6 +39,12 @@ function newCode(existing: string[]): string {
   }
 }
 
+/** "16:00" + 4 → "20:00" (para proponer el segundo tramo). */
+function addHours(hhmm: string, h: number): string {
+  const [hh, mm] = hhmm.split(":").map(Number);
+  return `${String((hh + h) % 24).padStart(2, "0")}:${String(mm || 0).padStart(2, "0")}`;
+}
+
 const fmtHours = (h: number) => (Number.isInteger(h) ? `${h} h` : `${h.toFixed(1).replace(".", ",")} h`);
 
 export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave = saveNecesidades }: Props) {
@@ -43,7 +52,7 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
   const [rows, setRows] = useState<ShiftRow[]>(() =>
     activeSlots(initialShifts).map((c) => {
       const s = initialShifts[c];
-      return { code: c, label: s.label, start: s.start, end: s.end, closing: s.closing };
+      return { code: c, label: s.label, start: s.start, end: s.end, start2: s.start2 ?? "", end2: s.end2 ?? "", closing: s.closing };
     }),
   );
   const [dirty, setDirty] = useState(false);
@@ -84,7 +93,7 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
   }
 
   function addRow() {
-    setRows((r) => [...r, { code: newCode(r.map((x) => x.code)), label: "", start: "10:00", end: "18:00", closing: false }]);
+    setRows((r) => [...r, { code: newCode(r.map((x) => x.code)), label: "", start: "10:00", end: "18:00", start2: "", end2: "", closing: false }]);
     touch();
   }
 
@@ -113,7 +122,10 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
 
   function save() {
     start(async () => {
-      const res = await onSave({ demand: demand as NecesidadesInput["demand"], shifts: rows.map((r) => ({ ...r, label: r.label.trim() })) });
+      const res = await onSave({
+        demand: demand as NecesidadesInput["demand"],
+        shifts: rows.map((r) => ({ ...r, label: r.label.trim(), start2: r.start2 || null, end2: r.end2 || null })),
+      });
       if (!res.ok) return toast.show({ message: res.error, tone: "error" });
       setDirty(false);
       toast.show("Guardado. El generador ya lo tiene en cuenta.");
@@ -186,7 +198,7 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
                       <th scope="row" className={`sticky left-0 z-10 bg-surface text-left font-normal ${ri === 0 ? "pt-4" : ""}`}>
                         {ri === 0 && (
                           <div className="mb-1.5 truncate text-[12px] font-semibold uppercase tracking-wide text-ink-muted" title={slot.label}>
-                            {slot.label || "Franja nueva"} · {slot.start}–{slot.end}
+                            {slot.label || "Franja nueva"} · {shiftTimes({ start: slot.start, end: slot.end, start2: slot.start2 || null, end2: slot.end2 || null })}
                           </div>
                         )}
                         <RoleBadge role={role} />
@@ -251,8 +263,9 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
           </div>
           <ul className="flex flex-col gap-2">
             {rows.map((row, i) => {
-              const h = spanHours(row.start, row.end);
-              const bad = h < 0.5 || h > 16;
+              const split = Boolean(row.start2 || row.end2);
+              const h = shiftHours(row.start, row.end, row.start2 || null, row.end2 || null);
+              const bad = spanHours(row.start, row.end) < 0.5 || h > 16;
               return (
                 <li
                   key={row.code}
@@ -296,6 +309,28 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
                   >
                     ✕
                   </button>
+                  {/* Turno partido: un segundo tramo el mismo día (p. ej. 12–16 y 20–24). */}
+                  <div className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-2 md:col-span-7 md:pl-[72px]">
+                    <label className="flex min-h-9 cursor-pointer items-center gap-2 text-sm text-ink-soft">
+                      <input
+                        type="checkbox"
+                        checked={split}
+                        onChange={(e) =>
+                          updateRow(i, e.target.checked ? { start2: addHours(row.end, 4), end2: addHours(row.end, 8) } : { start2: "", end2: "" })
+                        }
+                        className="h-4 w-4 accent-[#1F5C46]"
+                      />
+                      Turno partido
+                    </label>
+                    {split && (
+                      <span className="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+                        y vuelve de
+                        <input type="time" aria-label={`Vuelta de ${row.label}`} value={row.start2} onChange={(e) => updateRow(i, { start2: e.target.value })} className={`${ui.input} w-[130px]`} />
+                        a
+                        <input type="time" aria-label={`Salida final de ${row.label}`} value={row.end2} onChange={(e) => updateRow(i, { end2: e.target.value })} className={`${ui.input} w-[130px]`} />
+                      </span>
+                    )}
+                  </div>
                 </li>
               );
             })}

@@ -297,3 +297,32 @@ describe("franjas editadas en el alta", () => {
     expect(demand[0].F1).toEqual({ conductores: 1, taller: 1 });
   });
 });
+
+describe("turnos partidos", async () => {
+  const { shiftHours, shiftSegments, shiftTimes, restViolations } = await import("./rules");
+  const { plannedWindow } = await import("../fichajes");
+  const partido = { code: "P", label: "Partido", start: "12:00", end: "16:00", start2: "20:00", end2: "00:00", hours: 8, closing: true, order: 0, active: true };
+  const manana = { code: "M", label: "Mañana", start: "09:00", end: "17:00", hours: 8, closing: false, order: 1, active: true };
+  const shifts = { P: partido, M: manana };
+
+  it("suma las horas de los dos tramos y los ordena", () => {
+    expect(shiftHours("12:00", "16:00", "20:00", "00:00")).toBe(8);
+    expect(shiftSegments(partido)).toEqual([
+      { start: 12, end: 16 },
+      { start: 20, end: 24 },
+    ]);
+    expect(shiftTimes(partido)).toBe("12:00–16:00 y 20:00–00:00");
+  });
+
+  it("el descanso cuenta desde el final del segundo tramo", () => {
+    // Acaba a las 00:00 y entra a las 09:00: 9 h de descanso (< 12)
+    expect(restViolations(["P", "M", "L", "L", "L", "L", "L"], shifts, 12)).toEqual([0, 1]);
+    expect(restViolations(["P", "M", "L", "L", "L", "L", "L"], shifts, 9)).toEqual([]);
+  });
+
+  it("el fichaje previsto va de la primera entrada a la última salida", () => {
+    const w = plannedWindow("2026-10-14", partido);
+    expect(new Date(w.start).toISOString()).toBe("2026-10-14T10:00:00.000Z");
+    expect(new Date(w.end).toISOString()).toBe("2026-10-14T22:00:00.000Z");
+  });
+});

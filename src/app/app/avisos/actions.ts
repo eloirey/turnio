@@ -1,6 +1,9 @@
 "use server";
 
+import { after } from "next/server";
 import { AVISO_COLUMNS, toAvisos, type Aviso, type AvisoRow } from "@/lib/avisos";
+import { requireLocal } from "@/lib/data/queries";
+import { deliverPush, removeSubscription, saveSubscription } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 
 export type AvisosResult = { ok: true; items: Aviso[]; unread: number } | { ok: false };
@@ -10,6 +13,8 @@ export async function loadAvisos(): Promise<AvisosResult> {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   if (!claims?.claims?.sub) return { ok: false };
+  // De paso, se mandan al móvil los avisos pendientes (también los anuncios de Rotafy).
+  after(() => deliverPush().catch(() => undefined));
   const [list, count] = await Promise.all([
     supabase.from("avisos").select(AVISO_COLUMNS).is("empleado_id", null).order("creado_en", { ascending: false }).limit(30),
     supabase.from("avisos").select("id", { count: "exact", head: true }).is("empleado_id", null).is("leido_en", null),
@@ -22,4 +27,18 @@ export async function readAvisos(): Promise<{ ok: boolean }> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("leer_avisos");
   return { ok: !error };
+}
+
+// ---------- Avisos en el móvil del encargado ----------
+
+export async function savePushManager(subscription: unknown): Promise<{ ok: boolean }> {
+  const { local } = await requireLocal();
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  return { ok: await saveSubscription(subscription, { localId: local.id, userId: (data?.claims?.sub as string) ?? null }) };
+}
+
+export async function removePushManager(endpoint: string): Promise<{ ok: boolean }> {
+  const { local } = await requireLocal();
+  return { ok: await removeSubscription(endpoint, { localId: local.id }) };
 }

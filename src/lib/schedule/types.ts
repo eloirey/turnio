@@ -23,6 +23,9 @@ export interface ShiftDef {
   label: string; // "Mañana", "Línea 12"…
   start: string; // "09:00"
   end: string; // "17:00" (si es menor o igual que start, termina al día siguiente)
+  /** Turno partido: segundo tramo del mismo día ("20:00"–"00:00"). */
+  start2?: string | null;
+  end2?: string | null;
   hours: number;
   /** Cuenta como "cierre" para la regla de cierres seguidos (p. ej. la noche). */
   closing: boolean;

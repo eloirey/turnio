@@ -5,7 +5,7 @@
  * horas) se muestra en hora de Madrid, que es donde están los locales.
  * Un tramo pertenece al día en que empieza (hora de Madrid).
  */
-import { toHours } from "@/lib/schedule/rules";
+import { shiftSegments } from "@/lib/schedule/rules";
 import type { ShiftDef } from "@/lib/schedule/types";
 
 export interface ClockRecord {
@@ -18,6 +18,35 @@ export interface ClockRecord {
   /** Se olvidó de fichar la salida: cuenta 0 horas hasta que el encargado lo corrija. */
   missingEnd: boolean;
   edited: boolean;
+  /** Dónde fichó (si el local lo comprueba). Nunca hay coordenadas. */
+  placeIn?: ClockPlace | null;
+  placeOut?: ClockPlace | null;
+  /** Distancia aproximada al local en metros, si fichó fuera. */
+  distIn?: number | null;
+  distOut?: number | null;
+}
+
+export type ClockPlace = "local" | "fuera" | "sin_datos" | "teletrabajo";
+
+export const PLACE_LABEL: Record<ClockPlace, string> = {
+  local: "En el local",
+  fuera: "Fuera del local",
+  sin_datos: "Sin ubicación",
+  teletrabajo: "Teletrabajo",
+};
+
+/** «Fuera del local (a 1,2 km)» */
+export function placeText(place: ClockPlace | null | undefined, dist?: number | null): string {
+  if (!place) return "";
+  if (place !== "fuera" || dist == null) return PLACE_LABEL[place];
+  return `${PLACE_LABEL.fuera} (a ${dist >= 1000 ? `${(Math.round(dist / 100) / 10).toString().replace(".", ",")} km` : `${dist} m`})`;
+}
+
+/** ¿Algún tramo del día se fichó fuera o sin ubicación? */
+export function placeFlag(records: ClockRecord[]): "fuera" | "sin_datos" | null {
+  if (records.some((r) => r.placeIn === "fuera" || r.placeOut === "fuera")) return "fuera";
+  if (records.some((r) => r.placeIn === "sin_datos" || r.placeOut === "sin_datos")) return "sin_datos";
+  return null;
 }
 
 export interface ClockChange {
@@ -115,10 +144,13 @@ export interface DayStatus {
 }
 
 /** Inicio y fin previstos de un turno en ese día, como instantes. */
-export function plannedWindow(dateISO: string, shift: Pick<ShiftDef, "start" | "end">) {
+export function plannedWindow(dateISO: string, shift: Pick<ShiftDef, "start" | "end" | "start2" | "end2">) {
+  // Entrada del primer tramo y salida del último (en un partido, la de la noche).
+  const segs = shiftSegments(shift);
+  const last = segs[segs.length - 1];
+  const endTime = shift.start2 && shift.end2 ? shift.end2 : shift.end;
   const start = Date.parse(madridToIso(dateISO, shift.start));
-  let end = Date.parse(madridToIso(dateISO, shift.end));
-  if (toHours(shift.end) <= toHours(shift.start)) end = Date.parse(madridToIso(addOneDay(dateISO), shift.end));
+  const end = Date.parse(madridToIso(last.end >= 24 ? addOneDay(dateISO) : dateISO, endTime));
   return { start, end };
 }
 

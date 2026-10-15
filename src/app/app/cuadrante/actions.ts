@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { deliverPush } from "@/lib/push";
 import { z } from "zod";
 import { gridToTurnos, type Snapshot, type TurnoRow } from "@/lib/data/mappers";
 import { requireUser } from "@/lib/data/queries";
@@ -49,6 +51,7 @@ export async function publishWeek(weekId: string): Promise<PublishResult> {
   const { error } = await supabase.rpc("publicar_semana", { p_semana: weekId });
   if (error) return { ok: false, error: "No se ha podido publicar." };
   revalidatePath("/app/cuadrante");
+  after(() => deliverPush().catch(() => undefined));
   return { ok: true, previous: (before?.publicado as Snapshot | null) ?? null };
 }
 
@@ -72,6 +75,7 @@ export async function acceptRequest(weekId: string, requestId: string): Promise<
 
   const { data, error: e2 } = await supabase.from("turnos").select("empleado_id, dia, franja").eq("semana_id", weekId);
   if (e2) return { ok: false, error: "Aceptada, pero no se ha podido recargar el cuadrante." };
+  after(() => deliverPush().catch(() => undefined));
   return { ok: true, turnos: (data ?? []) as TurnoRow[] };
 }
 
@@ -85,5 +89,6 @@ export async function rejectRequest(requestId: string): Promise<Result> {
     .eq("id", requestId)
     .eq("estado", "pendiente");
   if (error) return { ok: false, error: "No se ha podido rechazar." };
+  after(() => deliverPush().catch(() => undefined));
   return { ok: true };
 }

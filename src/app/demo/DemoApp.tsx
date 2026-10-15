@@ -21,7 +21,7 @@ import { addDays, dayOfMonth, isValidISODate } from "@/lib/dates";
 import { dayStatus, groupByEmployeeDay, madridToIso, type ClockDayRow, type ClockRecord } from "@/lib/fichajes";
 import { employeeSchema, firstError, necesidadesSchema, settingsSchema } from "@/lib/forms";
 import { makeRoleKey } from "@/lib/roles";
-import { toHours } from "@/lib/schedule/rules";
+import { shiftTimes, toHours } from "@/lib/schedule/rules";
 import { activeSlots, type Demand, type Grid } from "@/lib/schedule/types";
 import { applyShifts, createDemoState, normalizeGrid, simulateClock, type DemoState, type DemoTab } from "./demo-store";
 
@@ -91,6 +91,7 @@ export function DemoApp() {
           minDaysOff: d.minDaysOff ?? null,
           maxConsecutiveClosings: d.maxConsecutiveClosings ?? null,
           preferredDaysOff: d.preferredDaysOff ?? [],
+          remoteDays: d.remoteDays ?? [],
           phone: d.telefono || null,
           token: input.id ? (s.employees.find((e) => e.id === id)?.token ?? "") : `${s.seq}`.padStart(32, "a"),
         };
@@ -137,7 +138,7 @@ export function DemoApp() {
           ...st,
           name: v.nombre,
           rules: { maxConsecutiveNights: v.maxConsecutiveNights, minRestHours: v.minRestHours, minDaysOff: v.minDaysOff, maxExtraHours: v.maxExtraHours },
-          settings: { clockIn: v.clockIn, clockMarginMinutes: v.clockMarginMinutes },
+          settings: { ...st.settings, clockIn: v.clockIn, clockMarginMinutes: v.clockMarginMinutes, clockControl: v.clockControl, clockRadius: v.clockRadius },
         }));
         return next({ ok: true as const });
       },
@@ -240,7 +241,7 @@ export function DemoApp() {
               name: e.name,
               role: roleName[e.role] ?? e.role,
               records,
-              planned: shift ? `${shift.label} ${shift.start}–${shift.end}` : "",
+              planned: shift ? `${shift.label} ${shiftTimes(shift)}` : "",
               plannedHours: shift?.hours ?? 0,
               status: dayStatus(date, records, shift, new Date(s.now), s.settings.clockMarginMinutes).kind,
               lastReason: [...s.changes].reverse().find((ch) => records.some((r) => r.id === ch.recordId))?.reason,

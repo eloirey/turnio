@@ -11,13 +11,14 @@ Cuadrantes de turnos para negocios con turnos en España (hostelería, tiendas, 
 | `/login` | Encargado | Crear cuenta y entrar con email y contraseña |
 | `/login`, `/recuperar`, `/nueva-contrasena` | Encargado | Entrar con email o Google, y recuperar la contraseña |
 | `/bienvenida` | Encargado | Crear el negocio desde una de las 17 plantillas por sector (puestos, franjas y necesidades) |
-| `/app/cuadrante` | Encargado | Generar, retocar (se autoguarda, con deshacer), saltar a cualquier semana o día, copiar la semana anterior, publicar, avisar por WhatsApp o Telegram (al republicar, solo a quien le cambia algo), aceptar cambios, imprimir y exportar a Excel. Si el local ficha, debajo de cada turno se ve la hora real de entrada y salida |
-| `/app/fichajes` | Encargado | Registro de jornada: quién trabaja ahora, horas por persona y día, incidencias (olvidos, turnos sin fichar), correcciones con motivo e historial, exportar el mes a Excel |
-| `/app/empleados` | Encargado | Equipo, horas de contrato, disponibilidad, preferencias y reglas propias, ausencias y enlace personal |
-| `/app/necesidades` | Encargado | Cuánta gente hace falta por franja y puesto, y las franjas (nombre libre, horario, orden, cierres) |
-| `/app/ajustes` | Encargado | Nombre, reglas (descanso, días libres, cierres seguidos, horas extra), fichaje, puestos y borrar la cuenta |
-| Campanita (cabecera) | Encargado y empleado | Avisos: solicitudes, respuestas, horario publicado o cambiado, olvidos y correcciones de fichaje, y anuncios de Rotafy |
-| `/h/<nombre>-<token>` | Empleado | Su horario, fichar entrada y salida, avisos, pedir cambios y suscribirse al calendario, sin registrarse |
+| `/app/cuadrante` | Encargado | Generar (también turnos partidos), retocar (se autoguarda, con deshacer), saltar a cualquier semana o día, copiar la semana anterior, publicar, avisar por WhatsApp o Telegram (al republicar, solo a quien le cambia algo), aceptar cambios, imprimir y exportar a Excel. Si el local ficha, debajo de cada turno se ve la hora real de entrada y salida |
+| `/app/fichajes` | Encargado | Registro de jornada: quién trabaja ahora, horas por persona y día, incidencias (olvidos, turnos sin fichar, fichajes fuera del local), correcciones con motivo e historial, exportar el mes a Excel |
+| `/app/empleados` | Encargado | Equipo, horas de contrato, disponibilidad, preferencias y reglas propias, teletrabajo, ausencias y enlace personal |
+| `/app/necesidades` | Encargado | Cuánta gente hace falta por franja y puesto, y las franjas (nombre libre, horario, turno partido, orden, cierres) |
+| `/app/ajustes` | Encargado | Nombre, reglas (descanso, días libres, cierres seguidos, horas extra), fichaje y desde dónde se puede fichar (ubicación o wifi), puestos, encargados (invitar y quitar) y borrar la cuenta |
+| `/invitacion/<token>` | Encargado invitado | Aceptar la invitación para gestionar un negocio con su propia cuenta |
+| Campanita (cabecera) | Encargado y empleado | Avisos: solicitudes, respuestas, horario publicado o cambiado, olvidos, correcciones y fichajes fuera del local, y anuncios de Rotafy. También pueden llegar al móvil como notificación |
+| `/h/<nombre>-<token>` | Empleado | Su horario, fichar entrada y salida, ver y descargar su registro de jornada, avisos (también en el móvil), pedir cambios y suscribirse al calendario, sin registrarse |
 | `/h/<nombre>-<token>/calendario.ics` | Empleado | Calendario `.ics` que se actualiza solo (iPhone, Google, Outlook) |
 | `/legal/*` | Todos | Privacidad y aviso legal |
 
@@ -40,6 +41,7 @@ npm install
    2. `20261015000000_v2.sql` (puestos, ausencias, reglas y funciones de carga rápida).
    3. `20261016000000_v3.sql` (franjas con nombre libre, reglas por persona, horas extra y fichajes).
    4. `20261017000000_v4.sql` (avisos: la campanita del encargado y de cada empleado).
+   5. `20261018000000_v5.sql` (lugar al fichar, teletrabajo, turnos partidos, avisos en el móvil y varios encargados).
 
    Se pueden ejecutar sobre una base que ya tiene datos: los conservan.
 3. En **Authentication → Sign In / Providers → Email**, mientras desarrollas puedes desactivar *Confirm email* para entrar sin confirmar el correo.
@@ -63,7 +65,21 @@ NEXT_PUBLIC_SITE_URL=https://rotafy.es   # en producción
 NEXT_PUBLIC_AUTH_GOOGLE=1                # solo si has configurado Google
 ```
 
-> La `SUPABASE_SERVICE_ROLE_KEY` salta la seguridad de la base de datos. Solo se usa en el servidor, para la vista del empleado. **Nunca la subas a GitHub** (`.env.local` ya está en `.gitignore`).
+#### Avisos en el móvil (opcional, gratis)
+Las notificaciones al móvil usan Web Push: las entregan los propios navegadores y no cuestan nada. Solo hacen falta unas claves propias:
+
+1. En tu ordenador, dentro de la carpeta del proyecto: `npx web-push generate-vapid-keys`.
+2. Pon lo que sale en `.env.local` y en las variables de entorno de Netlify:
+   ```
+   NEXT_PUBLIC_VAPID_PUBLIC_KEY=...   # la «Public Key»
+   VAPID_PRIVATE_KEY=...              # la «Private Key» (secreta, como la service role)
+   VAPID_SUBJECT=mailto:tu@email.com
+   ```
+3. Vuelve a desplegar. Sin estas claves la app funciona igual, solo que sin avisos en el móvil.
+
+En Android funcionan desde el navegador. En iPhone (iOS 16.4 o superior), Apple solo los permite si la persona añade la página a la pantalla de inicio; la app se lo explica.
+
+> La `SUPABASE_SERVICE_ROLE_KEY` y la `VAPID_PRIVATE_KEY` son secretas. La primera salta la seguridad de la base de datos. Solo se usa en el servidor, para la vista del empleado. **Nunca la subas a GitHub** (`.env.local` ya está en `.gitignore`).
 
 ### 5. Arrancar
 ```bash
@@ -94,6 +110,7 @@ src/
     feedback.tsx             Avisos (toasts) y confirmaciones
     nav.tsx                  Enlaces que en la demo cambian de pestaña en vez de navegar
   lib/
+    push.ts  clock-place.ts  Avisos en el móvil y comprobación del lugar al fichar
     schedule/                Lógica pura: generador, reglas, validador (+ tests)
     data/
       mappers.ts             Filas de la BD ⇄ tipos del dominio (+ tests)
@@ -123,6 +140,8 @@ supabase/
 - **La demo es la app de verdad.** Usa los mismos componentes; solo cambian las acciones, que guardan en memoria.
 - **Lo publicado es una copia.** Al publicar se guarda una foto del cuadrante (`semanas.publicado`). El encargado puede seguir retocando sin que el equipo vea cambios a medias hasta que vuelva a publicar.
 - **WhatsApp sin API.** Enlaces `wa.me` con el mensaje ya escrito: gratis y sin trámites con Meta.
+- **El lugar al fichar sin vigilar.** Solo se mira en el momento de fichar (GPS del móvil o la wifi del local) y se guarda el resultado y la distancia, nunca las coordenadas. El encargado elige si solo avisa o si bloquea.
+- **Varios encargados, un dueño.** Los invitados entran con su propia cuenta y gestionan todo menos borrar el negocio. La seguridad (RLS) usa `es_mi_local`, que vale para el dueño y para los miembros.
 - **Empleados sin cuenta.** Cada uno tiene un enlace con un token aleatorio de 128 bits. La página no se indexa en buscadores.
 
 ## Probar la base de datos sin Supabase
@@ -136,10 +155,12 @@ psql -d rotafy_test -f supabase/migrations/20261014000000_init.sql
 psql -d rotafy_test -f supabase/migrations/20261015000000_v2.sql
 psql -d rotafy_test -f supabase/migrations/20261016000000_v3.sql
 psql -d rotafy_test -f supabase/migrations/20261017000000_v4.sql
+psql -d rotafy_test -f supabase/migrations/20261018000000_v5.sql
 psql -d rotafy_test -f supabase/tests/10_rls_y_funciones.sql   # debe terminar en "TODAS LAS PRUEBAS ... PASAN"
 psql -d rotafy_test -f supabase/tests/20_v2.sql
 psql -d rotafy_test -f supabase/tests/30_v3.sql                # "TODAS LAS PRUEBAS DE v3 PASAN"
 psql -d rotafy_test -f supabase/tests/40_v4.sql                # "TODAS LAS PRUEBAS DE v4 PASAN"
+psql -d rotafy_test -f supabase/tests/50_v5.sql                # "TODAS LAS PRUEBAS DE v5 PASAN"
 ```
 
 ## Mandar un anuncio a todos (la campanita)
@@ -168,4 +189,5 @@ Solo se puede llamar desde el editor SQL: ningún usuario de la app puede mandar
 - [ ] Desplegar en Netlify con el dominio rotafy.es (añadir las 3 variables de entorno y `NEXT_PUBLIC_SITE_URL=https://rotafy.es`)
 - [ ] Probar una semana con un bar real
 - [ ] Pagos con Stripe cuando haya interesados
-- [ ] Registro de jornada (fichar entrada y salida)
+- [x] Registro de jornada (fichar entrada y salida)
+- [x] Lugar al fichar, teletrabajo, turnos partidos, avisos en el móvil, registro para el empleado y varios encargados

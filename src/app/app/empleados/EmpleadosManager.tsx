@@ -8,6 +8,7 @@ import { ABSENCE_LABELS, type AbsenceReason, type AusenciaRow, type EmployeeReco
 import { DAY_LONG, DAY_SHORT, rangeLabel, shortDateLabel } from "@/lib/dates";
 import { employeePath } from "@/lib/employee-link";
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
+import { shiftTimes } from "@/lib/schedule/rules";
 import { activeSlots, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
 import { personalLinkMessage, personalLinkMessageNoLink } from "@/lib/messages";
 import { telegramLink } from "@/lib/share";
@@ -32,6 +33,7 @@ interface Draft {
   minDaysOff: number | null;
   maxConsecutiveClosings: number | null;
   preferredDaysOff: number[];
+  remoteDays: number[];
 }
 
 const allWeek = () => Array<boolean>(7).fill(true);
@@ -46,6 +48,7 @@ function newDraft(roles: Role[], slots: Slot[]): Draft {
     minDaysOff: null,
     maxConsecutiveClosings: null,
     preferredDaysOff: [],
+    remoteDays: [],
   };
 }
 
@@ -60,6 +63,7 @@ function toDraft(e: EmployeeRecord, slots: Slot[]): Draft {
     minDaysOff: e.minDaysOff ?? null,
     maxConsecutiveClosings: e.maxConsecutiveClosings ?? null,
     preferredDaysOff: [...(e.preferredDaysOff ?? [])],
+    remoteDays: [...(e.remoteDays ?? [])],
   };
 }
 
@@ -123,6 +127,7 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
         minDaysOff: draft.minDaysOff,
         maxConsecutiveClosings: draft.maxConsecutiveClosings,
         preferredDaysOff: draft.preferredDaysOff,
+        remoteDays: draft.remoteDays,
       });
       if (!res.ok) return setError(res.error);
       const isNew = !draft.id;
@@ -305,7 +310,7 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                           {shifts[slot].label}
                         </span>
                         <span className="block text-[11px] text-ink-muted tabular-nums">
-                          {shifts[slot].start}–{shifts[slot].end}
+                          {shiftTimes(shifts[slot])}
                         </span>
                       </span>
                       {week.map((on, day) => (
@@ -336,7 +341,7 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
               <div>
                 <h2 className={ui.h2}>Preferencias y reglas propias</h2>
                 <p className="mt-1 text-sm text-ink-soft">
-                  {draft.preferredDaysOff.length || draft.minDaysOff !== null || draft.maxConsecutiveClosings !== null
+                  {draft.preferredDaysOff.length || draft.minDaysOff !== null || draft.maxConsecutiveClosings !== null || draft.remoteDays.length
                     ? summaryOf(draft, rules)
                     : "Sigue las reglas del negocio. Personalízalas si esta persona tiene un acuerdo distinto."}
                 </p>
@@ -399,6 +404,47 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                       ))}
                     </select>
                   </label>
+                </div>
+                <div className="rounded-xl border border-line p-4">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={draft.remoteDays.length > 0}
+                      onChange={(e) => update("remoteDays", e.target.checked ? [0, 1, 2, 3, 4, 5, 6] : [])}
+                      className="mt-0.5 h-5 w-5 flex-none accent-[#1F5C46]"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold">🏠 Teletrabajo: puede fichar desde cualquier sitio</span>
+                      <span className="block text-[13px] text-ink-muted">Esos días no se comprueba si está en el local y su fichaje sale como «Teletrabajo».</span>
+                    </span>
+                  </label>
+                  {draft.remoteDays.length > 0 && (
+                    <div className="mt-3 pl-8">
+                      <div className="mb-1.5 text-[13px] text-ink-soft">
+                        {draft.remoteDays.length === 7 ? "Siempre. Si es híbrido, deja marcados solo sus días de teletrabajo:" : "Solo estos días:"}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {DAY_SHORT.map((d, i) => {
+                          const on = draft.remoteDays.includes(i);
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={on}
+                              onClick={() => {
+                                const next = on ? draft.remoteDays.filter((x) => x !== i) : [...draft.remoteDays, i].sort();
+                                if (next.length) update("remoteDays", next);
+                              }}
+                              className={`h-10 min-w-12 rounded-lg border px-2.5 text-sm font-semibold transition ${on ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong text-ink-soft hover:border-ink"}`}
+                            >
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <p className="text-[13px] text-ink-muted">
                   ¿Hay días que no puede trabajar nunca? Desmárcalos en la disponibilidad: eso es obligatorio para el generador, no una preferencia.
@@ -501,7 +547,10 @@ function summaryOf(d: Draft, rules: Rules): string {
   if (d.minDaysOff !== null && d.minDaysOff !== rules.minDaysOff) parts.push(`${d.minDaysOff} ${d.minDaysOff === 1 ? "día libre" : "días libres"} a la semana`);
   if (d.maxConsecutiveClosings !== null && d.maxConsecutiveClosings !== rules.maxConsecutiveNights)
     parts.push(`máximo ${d.maxConsecutiveClosings} ${d.maxConsecutiveClosings === 1 ? "cierre seguido" : "cierres seguidos"}`);
-  return parts.length ? parts.join(" · ") + "." : "Sigue las reglas del negocio.";
+  if (d.remoteDays.length) parts.push(d.remoteDays.length === 7 ? "teletrabajo siempre" : `teletrabajo ${d.remoteDays.map((i) => DAY_SHORT[i].toLowerCase()).join(", ")}`);
+  if (!parts.length) return "Sigue las reglas del negocio.";
+  const text = parts.join(" · ") + ".";
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function AbsencesCard(props: {

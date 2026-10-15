@@ -4,7 +4,7 @@
  * Son funciones puras: se testean sin base de datos.
  */
 import { addDays } from "@/lib/dates";
-import type { ClockRecord } from "@/lib/fichajes";
+import type { ClockPlace, ClockRecord } from "@/lib/fichajes";
 import type { Role } from "@/lib/roles";
 import { DEFAULT_RULES, DEFAULT_SHIFTS } from "@/lib/schedule/defaults";
 import {
@@ -30,7 +30,16 @@ export interface LocalRow {
   horas_extra_max?: number;
   fichaje_activo?: boolean;
   fichaje_margen_minutos?: number;
+  fichaje_control?: ClockControl;
+  fichaje_lat?: number | null;
+  fichaje_lng?: number | null;
+  fichaje_radio_m?: number;
+  fichaje_ips?: string[];
+  es_dueno?: boolean;
 }
+
+/** Cómo se controla desde dónde se ficha. */
+export type ClockControl = "no" | "avisar" | "bloquear";
 export interface PuestoRow {
   clave: string;
   nombre: string;
@@ -47,6 +56,7 @@ export interface EmpleadoRow {
   min_dias_libres?: number | null;
   max_cierres_seguidos?: number | null;
   prefiere_librar?: number[] | null;
+  teletrabajo_dias?: number[] | null;
 }
 export interface DisponibilidadRow {
   empleado_id: string;
@@ -69,6 +79,8 @@ export interface FranjaRow {
   etiqueta: string;
   inicio: string;
   fin: string;
+  inicio2?: string | null;
+  fin2?: string | null;
   horas: number | string; // numeric llega como texto desde PostgREST
   cierre?: boolean;
   orden?: number;
@@ -99,12 +111,21 @@ export interface LocalSettings {
   clockIn: boolean;
   /** Minutos de margen antes de marcar un retraso o una salida temprana. */
   clockMarginMinutes: number;
+  /** Comprobar si se ficha en el local: no, avisar o no dejar. */
+  clockControl: ClockControl;
+  /** ¿Hay ubicación del local guardada? (las coordenadas no salen del servidor) */
+  clockHasPlace: boolean;
+  clockRadius: number;
+  /** IPs de la wifi del local. */
+  clockIps: string[];
 }
 
 /** Empleado con los datos que no necesita el generador pero sí la interfaz. */
 export interface EmployeeRecord extends Employee {
   phone: string | null;
   token: string;
+  /** Días (0 = lunes) en que puede fichar desde cualquier sitio. */
+  remoteDays?: number[];
 }
 
 const emptyWeek = () => Array<boolean>(DAYS_IN_WEEK).fill(false);
@@ -128,6 +149,7 @@ export function toEmployees(rows: EmpleadoRow[], availability: DisponibilidadRow
       preferredDaysOff: r.prefiere_librar ?? [],
       phone: r.telefono,
       token: r.token_acceso,
+      remoteDays: r.teletrabajo_dias ?? [],
     };
   });
 }
@@ -215,6 +237,8 @@ export function franjasToCatalog(rows: FranjaRow[]): ShiftCatalog {
       label: r.etiqueta,
       start: r.inicio.slice(0, 5), // "09:00:00" → "09:00"
       end: r.fin.slice(0, 5),
+      start2: r.inicio2 ? r.inicio2.slice(0, 5) : null,
+      end2: r.fin2 ? r.fin2.slice(0, 5) : null,
       hours: Number(r.horas),
       closing: r.cierre ?? r.franja === "N",
       order: r.orden ?? i,
@@ -234,7 +258,14 @@ export function localToRules(local: LocalRow): Rules {
 }
 
 export function localToSettings(local: LocalRow): LocalSettings {
-  return { clockIn: Boolean(local.fichaje_activo), clockMarginMinutes: local.fichaje_margen_minutos ?? 10 };
+  return {
+    clockIn: Boolean(local.fichaje_activo),
+    clockMarginMinutes: local.fichaje_margen_minutos ?? 10,
+    clockControl: local.fichaje_control ?? "no",
+    clockHasPlace: local.fichaje_lat != null && local.fichaje_lng != null,
+    clockRadius: local.fichaje_radio_m ?? 200,
+    clockIps: local.fichaje_ips ?? [],
+  };
 }
 
 /** Fila de fichaje tal como llega de la base de datos. */
@@ -245,6 +276,10 @@ export interface FichajeRow {
   salida: string | null;
   sin_salida: boolean;
   editado: boolean;
+  ubicacion_entrada?: ClockPlace | null;
+  ubicacion_salida?: ClockPlace | null;
+  distancia_entrada_m?: number | null;
+  distancia_salida_m?: number | null;
 }
 
 export function toClockRecords(rows: FichajeRow[]): ClockRecord[] {
@@ -255,5 +290,9 @@ export function toClockRecords(rows: FichajeRow[]): ClockRecord[] {
     end: f.salida,
     missingEnd: f.sin_salida,
     edited: f.editado,
+    placeIn: f.ubicacion_entrada ?? null,
+    placeOut: f.ubicacion_salida ?? null,
+    distIn: f.distancia_entrada_m ?? null,
+    distOut: f.distancia_salida_m ?? null,
   }));
 }

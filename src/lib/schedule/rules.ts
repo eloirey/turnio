@@ -1,4 +1,4 @@
-import { FREE, type Code, type Employee, type Rules, type ShiftCatalog } from "./types";
+import { FREE, type Code, type Employee, type Rules, type ShiftCatalog, type ShiftDef } from "./types";
 
 /**
  * Funciones puras que comprueban las reglas sobre la fila de UN empleado
@@ -20,6 +20,40 @@ export function spanHours(start: string, end: string): number {
   return Math.round((e - s) * 100) / 100;
 }
 
+/** Horas de una franja, con los dos tramos si es partida. */
+export function shiftHours(start: string, end: string, start2?: string | null, end2?: string | null): number {
+  return Math.round((spanHours(start, end) + (start2 && end2 ? spanHours(start2, end2) : 0)) * 100) / 100;
+}
+
+/** ¿Es un turno partido? */
+export function isSplit(def: Pick<ShiftDef, "start2" | "end2">): boolean {
+  return Boolean(def.start2 && def.end2);
+}
+
+/**
+ * Tramos de una franja en horas desde las 00:00 de su día (el segundo, si
+ * existe, siempre va después del primero; los finales pueden pasar de 24).
+ */
+export function shiftSegments(def: Pick<ShiftDef, "start" | "end" | "start2" | "end2">): { start: number; end: number }[] {
+  const s = toHours(def.start);
+  let e = toHours(def.end);
+  if (e <= s) e += 24;
+  const segs = [{ start: s, end: e }];
+  if (def.start2 && def.end2) {
+    let s2 = toHours(def.start2);
+    while (s2 < e) s2 += 24;
+    let e2 = toHours(def.end2) + Math.floor(s2 / 24) * 24;
+    while (e2 <= s2) e2 += 24;
+    segs.push({ start: s2, end: e2 });
+  }
+  return segs;
+}
+
+/** "09:00–17:00" o, si es partido, "12:00–16:00 y 20:00–00:00". */
+export function shiftTimes(def: Pick<ShiftDef, "start" | "end" | "start2" | "end2">, sep = "–"): string {
+  return def.start2 && def.end2 ? `${def.start}${sep}${def.end} y ${def.start2}${sep}${def.end2}` : `${def.start}${sep}${def.end}`;
+}
+
 /** Horas de una casilla (0 si es libre o la franja no existe). */
 export function codeHours(code: Code, shifts: ShiftCatalog): number {
   return code === FREE ? 0 : (shifts[code]?.hours ?? 0);
@@ -27,11 +61,9 @@ export function codeHours(code: Code, shifts: ShiftCatalog): number {
 
 /** Inicio y fin de una franja en horas absolutas desde el lunes a las 00:00. */
 export function shiftWindow(day: number, code: Code, shifts: ShiftCatalog) {
-  const def = shifts[code];
-  const s = toHours(def.start);
-  let e = toHours(def.end);
-  if (e <= s) e += 24; // termina al día siguiente (p. ej. 17:00–01:00)
-  return { start: day * 24 + s, end: day * 24 + e };
+  // Del inicio del primer tramo al final del último (un partido cuenta entero).
+  const segs = shiftSegments(shifts[code]);
+  return { start: day * 24 + segs[0].start, end: day * 24 + segs[segs.length - 1].end };
 }
 
 /** ¿La casilla es un cierre? */
