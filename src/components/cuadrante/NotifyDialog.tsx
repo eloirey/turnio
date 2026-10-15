@@ -7,6 +7,7 @@ import { groupScheduleMessage, personalScheduleMessage, personalScheduleMessageN
 import type { Code, ShiftCatalog } from "@/lib/schedule/types";
 import { CHANNELS, savedChannel, saveChannel, shareHref, type Channel } from "@/lib/share";
 import { employeePath } from "@/lib/employee-link";
+import { Portal } from "@/components/Portal";
 
 export interface NotifyEmployee {
   id: string;
@@ -70,6 +71,7 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
   }, []);
 
   return (
+    <Portal>
     <div className="anim-overlay fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" onClick={onClose}>
       <div
         role="dialog"
@@ -210,5 +212,6 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

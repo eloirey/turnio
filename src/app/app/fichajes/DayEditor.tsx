@@ -6,6 +6,8 @@ import { ui } from "@/components/ui";
 import { DAY_LONG } from "@/lib/dates";
 import { madridDate, madridTime, type ClockChange, placeText } from "@/lib/fichajes";
 import type { BoardPerson, Cell, ClockActions } from "./FichajesBoard";
+import { Portal } from "@/components/Portal";
+import { refreshAvisos } from "@/lib/avisos";
 
 /** Un tramo en el editor (lo que se ve y se puede cambiar). */
 export interface Row {
@@ -70,6 +72,7 @@ export function DayEditor(props: {
           : await actions.saveClock({ id: r.id, employeeId: person.id, date: c.date, start: r.start, end: r.end || null, reason });
         if (!res.ok) return setError(res.error);
       }
+      refreshAvisos();
       onSaved(changed.length === 1 ? "Fichaje corregido. Queda en el historial." : `${changed.length} cambios guardados. Quedan en el historial.`);
     });
   }
@@ -77,6 +80,7 @@ export function DayEditor(props: {
   const nextDay = (r: Row) => r.end && r.end <= r.start;
 
   return (
+    <Portal>
     <>
       <div className="anim-overlay fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div
@@ -189,6 +193,7 @@ export function DayEditor(props: {
         {props.isDemo && <p className="mt-4 text-[13px] text-ink-muted">En la demo los cambios no se guardan al salir.</p>}
       </div>
     </>
+    </Portal>
   );
 }
 

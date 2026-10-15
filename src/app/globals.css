@@ -76,12 +76,12 @@ body {
 @keyframes rf-pop { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
 @keyframes rf-up { from { opacity: 0; transform: translateY(18px); } }
 @keyframes rf-right { from { opacity: 0; transform: translateX(28px); } }
-.anim-overlay { animation: rf-fade 0.18s ease-out both; }
-.anim-pop { animation: rf-pop 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.anim-sheet { animation: rf-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.anim-drawer { animation: rf-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.anim-toast { animation: rf-up 0.2s ease-out both; }
-.anim-page { animation: rf-fade 0.22s ease-out both; }
+.anim-overlay { animation: rf-fade 0.18s ease-out backwards; }
+.anim-pop { animation: rf-pop 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.anim-sheet { animation: rf-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.anim-drawer { animation: rf-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.anim-toast { animation: rf-up 0.2s ease-out backwards; }
+.anim-page { animation: rf-fade 0.22s ease-out backwards; }
 @media (min-width: 640px) {
   .anim-sheet { animation-name: rf-pop; animation-duration: 0.18s; }
   .anim-drawer { animation-name: rf-right; }

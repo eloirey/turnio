@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "@/components/nav";
-import { safeAvisoLink, timeAgo, type Aviso, type AvisoTipo } from "@/lib/avisos";
+import { AVISOS_EVENT, safeAvisoLink, timeAgo, type Aviso, type AvisoTipo } from "@/lib/avisos";
 
 type LoadResult = { ok: true; items: Aviso[]; unread: number } | { ok: false };
 
@@ -18,6 +18,8 @@ interface Props {
   pollMs?: number;
   /** Algo al pie del panel (p. ej. activar los avisos en el móvil). */
   footer?: React.ReactNode;
+  /** Dar por resuelto un aviso a mano (solo el encargado). */
+  markDone?: (id: string) => Promise<{ ok: boolean }>;
 }
 
 const KIND: Record<AvisoTipo, { label: string; dot: string }> = {
@@ -29,7 +31,7 @@ const KIND: Record<AvisoTipo, { label: string; dot: string }> = {
 };
 
 /** Campanita con los avisos. Se actualiza sola cada minuto y al volver a la pestaña. */
-export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avisos.", pollMs = 60_000, footer }: Props) {
+export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avisos.", pollMs = 60_000, footer, markDone }: Props) {
   const [items, setItems] = useState<Aviso[]>(initial?.items ?? []);
   const [unread, setUnread] = useState(initial?.unread ?? 0);
   const [open, setOpen] = useState(false);
@@ -54,13 +56,23 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
     }
   }, [load, navigate, router]);
 
+  // «Hecho»: se marca al momento y luego se confirma con el servidor.
+  async function resolve(id: string) {
+    if (!markDone) return;
+    setItems((list) => list.map((x) => (x.id === id ? { ...x, resuelto: "Hecho", leido: true } : x)));
+    const res = await markDone(id).catch(() => ({ ok: false }));
+    if (!res.ok) refresh();
+  }
+
   useEffect(() => {
     const first = initial ? undefined : window.setTimeout(refresh, 0);
     // Con la pestaña oculta no se pregunta (ahorra batería y servidor); al volver, sí.
     const timer = pollMs ? window.setInterval(() => document.visibilityState === "visible" && refresh(), pollMs) : undefined;
     const onVisible = () => document.visibilityState === "visible" && refresh();
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener(AVISOS_EVENT, refresh);
     return () => {
+      window.removeEventListener(AVISOS_EVENT, refresh);
       if (first) window.clearTimeout(first);
       if (timer) window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
@@ -151,29 +163,44 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
               <ul className="flex-1 divide-y divide-line overflow-y-auto">
                 {items.map((a) => {
                   const link = safeAvisoLink(a.enlace);
+                  const done = Boolean(a.resuelto);
                   const body = (
                     <>
-                      <span className={`mt-1.5 h-2.5 w-2.5 flex-none rounded-full ${KIND[a.tipo].dot}`} aria-hidden />
+                      <span className={`mt-1.5 h-2.5 w-2.5 flex-none rounded-full ${done ? "bg-line-strong" : KIND[a.tipo].dot}`} aria-hidden />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center justify-between gap-2 text-[12px] text-ink-muted">
                           <span className="font-semibold uppercase tracking-[0.06em]">{KIND[a.tipo].label}</span>
                           <span className="flex-none">{timeAgo(a.creadoEn)}</span>
                         </span>
-                        <span className={`mt-0.5 block text-[15px] leading-snug ${a.leido ? "font-medium text-ink-soft" : "font-semibold text-ink"}`}>{a.titulo}</span>
-                        {a.cuerpo && <span className="mt-0.5 block text-[13px] leading-snug text-ink-muted">{a.cuerpo}</span>}
-                        {link && <span className="mt-1 block text-[13px] font-semibold text-accent">Ver →</span>}
+                        <span className={`mt-0.5 block text-[15px] leading-snug ${done ? "text-ink-muted" : a.leido ? "font-medium text-ink-soft" : "font-semibold text-ink"}`}>{a.titulo}</span>
+                        {a.cuerpo && !done && <span className="mt-0.5 block text-[13px] leading-snug text-ink-muted">{a.cuerpo}</span>}
+                        {done ? (
+                          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-ok-soft px-2 py-0.5 text-[12px] font-semibold text-accent">✓ {a.resuelto}</span>
+                        ) : a.accion ? (
+                          <span className="mt-1.5 inline-flex items-center rounded-full bg-pending-soft px-2 py-0.5 text-[12px] font-semibold text-pending-ink">Por resolver</span>
+                        ) : null}
+                        {link && !done && <span className="ml-2 text-[13px] font-semibold text-accent">Ver →</span>}
                       </span>
                     </>
                   );
-                  const cls = `flex w-full gap-3 px-4 py-3 text-left ${a.leido ? "" : "bg-accent-soft/60"}`;
+                  const cls = `flex w-full gap-3 px-4 py-3 text-left ${a.leido || done ? "" : "bg-accent-soft/60"}`;
                   return (
-                    <li key={a.id}>
+                    <li key={a.id} className="relative">
                       {link ? (
                         <button type="button" onClick={() => go(link)} className={`${cls} hover:bg-ground`}>
                           {body}
                         </button>
                       ) : (
                         <div className={cls}>{body}</div>
+                      )}
+                      {markDone && a.accion && !done && (
+                        <button
+                          type="button"
+                          onClick={() => resolve(a.id)}
+                          className="absolute bottom-2.5 right-3 rounded-full border border-line-strong bg-surface px-2.5 py-1 text-[12px] font-semibold text-ink-soft hover:border-ink hover:text-ink"
+                        >
+                          Marcar hecho
+                        </button>
                       )}
                     </li>
                   );

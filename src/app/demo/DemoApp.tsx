@@ -276,11 +276,11 @@ export function DemoApp() {
         const row = [...(grid[r.empleadoId] ?? [])];
         if (r.tipo === "librar") row[r.dia] = "L";
         const next = { ...grid, [r.empleadoId]: row };
-        update((s2) => ({ ...s2, grid: next, requests: s2.requests.filter((x) => x.id !== id), status: s2.published ? "cambios" : s2.status }));
+        update((s2) => ({ ...s2, grid: next, requests: s2.requests.filter((x) => x.id !== id), outcomes: { ...s2.outcomes, [id]: "Aceptada" }, status: s2.published ? "cambios" : s2.status }));
         return { ok: true as const, turnos: gridToTurnos(next) };
       },
       rejectRequest: async (id: string) => {
-        update((s2) => ({ ...s2, requests: s2.requests.filter((x) => x.id !== id) }));
+        update((s2) => ({ ...s2, requests: s2.requests.filter((x) => x.id !== id), outcomes: { ...s2.outcomes, [id]: "Rechazada" } }));
         return { ok: true as const };
       },
     }),
@@ -339,10 +339,10 @@ export function DemoApp() {
   // Es la misma persona que tiene la solicitud de ejemplo pendiente en el cuadrante.
   const someone = state.employees[2]?.name ?? state.employees[0]?.name ?? "Laura";
   const demoAvisosItems: Aviso[] = [
-    { id: "d1", tipo: "solicitud", titulo: `${someone} pide librar el viernes ${dayOfMonth(state.monday, 4)}`, cuerpo: "Tengo médico por la mañana.", enlace: "/app/cuadrante", creadoEn: new Date(Date.parse(state.now) - 25 * 60_000).toISOString(), leido: avisosRead },
-    { id: "d2", tipo: "anuncio", titulo: "Bienvenido a Rotafy", cuerpo: "Aquí te avisamos de las solicitudes de tu equipo, de quien olvide fichar la salida y de las novedades.", enlace: null, creadoEn: new Date(Date.parse(state.now) - 3 * 3_600_000).toISOString(), leido: avisosRead },
+    { id: "d1", tipo: "solicitud", titulo: `${someone} pide librar el viernes ${dayOfMonth(state.monday, 4)}`, cuerpo: "Tengo médico por la mañana.", enlace: "/app/cuadrante", creadoEn: new Date(Date.parse(state.now) - 25 * 60_000).toISOString(), leido: avisosRead || Boolean(state.outcomes?.["sol-1"]), accion: true, resuelto: state.outcomes?.["sol-1"] ?? null },
+    { id: "d2", tipo: "anuncio", titulo: "Bienvenido a Rotafy", cuerpo: "Aquí te avisamos de las solicitudes de tu equipo, de quien olvide fichar la salida y de las novedades.", enlace: null, creadoEn: new Date(Date.parse(state.now) - 3 * 3_600_000).toISOString(), leido: avisosRead, accion: false, resuelto: null },
   ];
-  const demoAvisos = { items: demoAvisosItems, unread: avisosRead ? 0 : demoAvisosItems.length };
+  const demoAvisos = { items: demoAvisosItems, unread: demoAvisosItems.filter((a) => !a.leido).length };
   const grid = normalizeGrid(state.grid, state.employees);
   const usage = Object.fromEntries(state.roles.map((r) => [r.key, state.employees.filter((e) => e.role === r.key).length]));
 
@@ -356,7 +356,7 @@ export function DemoApp() {
           extra={
             <>
               <AvisosBell
-                key={state.name}
+                key={`${state.name}-${state.outcomes?.["sol-1"] ?? ""}`}
                 initial={demoAvisos}
                 pollMs={0}
                 load={async () => ({ ok: true as const, ...demoAvisos })}

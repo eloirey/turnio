@@ -7,6 +7,7 @@ import { formatHours, madridTime, type ClockRecord, type DayStatus } from "@/lib
 import { shiftTimes } from "@/lib/schedule/rules";
 import { activeSlots, FREE, type Code, type ShiftCatalog } from "@/lib/schedule/types";
 import type { CuadranteEmployee } from "./Cuadrante";
+import { Portal } from "@/components/Portal";
 
 export interface Selection {
   id: string;
@@ -48,6 +49,7 @@ export function CellEditor(props: {
       })();
 
   return (
+    <Portal>
     <>
       <div className={`fixed inset-0 z-40 ${mobile ? "anim-overlay bg-black/30" : ""}`} onClick={onClose} />
       <div
@@ -101,5 +103,6 @@ export function CellEditor(props: {
         </div>
       </div>
     </>
+    </Portal>
   );
 }

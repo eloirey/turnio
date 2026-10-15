@@ -23,6 +23,14 @@ export async function loadAvisos(): Promise<AvisosResult> {
   return { ok: true, items: toAvisos((list.data ?? []) as AvisoRow[]), unread: count.count ?? 0 };
 }
 
+/** «Hecho»: el encargado da por resuelto un aviso. */
+export async function markAvisoDone(id: string): Promise<{ ok: boolean }> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("marcar_aviso_hecho", { p_id: id });
+  return { ok: !error };
+}
+
 export async function readAvisos(): Promise<{ ok: boolean }> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("leer_avisos");

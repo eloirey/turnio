@@ -10,6 +10,10 @@ export interface Aviso {
   enlace: string | null;
   creadoEn: string;
   leido: boolean;
+  /** Pide hacer algo (una solicitud, un olvido de fichaje…). */
+  accion: boolean;
+  /** Cómo se resolvió («Aceptada», «Corregido», «Hecho»…) o null si sigue pendiente. */
+  resuelto: string | null;
 }
 
 export interface AvisoRow {
@@ -20,12 +24,30 @@ export interface AvisoRow {
   enlace: string | null;
   creado_en: string;
   leido_en: string | null;
+  ref_tipo?: string | null;
+  resuelto?: string | null;
 }
 
-export const AVISO_COLUMNS = "id, tipo, titulo, cuerpo, enlace, creado_en, leido_en";
+export const AVISO_COLUMNS = "id, tipo, titulo, cuerpo, enlace, creado_en, leido_en, ref_tipo, resuelto";
 
 export function toAvisos(rows: AvisoRow[]): Aviso[] {
-  return rows.map((r) => ({ id: r.id, tipo: r.tipo, titulo: r.titulo, cuerpo: r.cuerpo, enlace: r.enlace, creadoEn: r.creado_en, leido: r.leido_en !== null }));
+  return rows.map((r) => ({
+    id: r.id,
+    tipo: r.tipo,
+    titulo: r.titulo,
+    cuerpo: r.cuerpo,
+    enlace: r.enlace,
+    creadoEn: r.creado_en,
+    leido: r.leido_en !== null,
+    accion: Boolean(r.ref_tipo),
+    resuelto: r.resuelto ?? null,
+  }));
+}
+
+/** Pide a la campanita que se actualice ya (p. ej. tras aceptar una solicitud). */
+export const AVISOS_EVENT = "rotafy:avisos";
+export function refreshAvisos(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(AVISOS_EVENT));
 }
 
 /** «ahora», «hace 5 min», «hace 3 h», «ayer», «hace 4 días», «12 oct». */
