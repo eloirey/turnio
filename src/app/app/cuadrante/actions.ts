@@ -17,7 +17,8 @@ export type Result = { ok: true } | { ok: false; error: string };
 export type TurnosResult = { ok: true; turnos: TurnoRow[] } | { ok: false; error: string };
 
 const uuid = z.uuid();
-const gridSchema = z.record(z.uuid(), z.array(z.enum(["M", "T", "N", "L"])).length(7));
+// Cada casilla es "L" (libre) o el código de una franja del local.
+const gridSchema = z.record(z.uuid(), z.array(z.string().regex(/^[A-Za-z0-9]{1,8}$/)).length(7));
 
 /** Autoguardado: sustituye los turnos de la semana (operación atómica en SQL). */
 export async function saveWeek(weekId: string, grid: Grid): Promise<Result> {

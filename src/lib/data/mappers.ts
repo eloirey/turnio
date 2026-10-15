@@ -4,11 +4,12 @@
  * Son funciones puras: se testean sin base de datos.
  */
 import { addDays } from "@/lib/dates";
+import type { ClockRecord } from "@/lib/fichajes";
 import type { Role } from "@/lib/roles";
 import { DEFAULT_RULES, DEFAULT_SHIFTS } from "@/lib/schedule/defaults";
 import {
   DAYS_IN_WEEK,
-  SLOTS,
+  FREE,
   type AbsenceMap,
   type Code,
   type Demand,
@@ -26,6 +27,9 @@ export interface LocalRow {
   max_noches_seguidas: number;
   descanso_minimo_horas: number;
   min_dias_libres: number;
+  horas_extra_max?: number;
+  fichaje_activo?: boolean;
+  fichaje_margen_minutos?: number;
 }
 export interface PuestoRow {
   clave: string;
@@ -40,6 +44,9 @@ export interface EmpleadoRow {
   telefono: string | null;
   token_acceso: string;
   activo: boolean;
+  min_dias_libres?: number | null;
+  max_cierres_seguidos?: number | null;
+  prefiere_librar?: number[] | null;
 }
 export interface DisponibilidadRow {
   empleado_id: string;
@@ -63,6 +70,9 @@ export interface FranjaRow {
   inicio: string;
   fin: string;
   horas: number | string; // numeric llega como texto desde PostgREST
+  cierre?: boolean;
+  orden?: number;
+  activa?: boolean;
 }
 export interface AusenciaRow {
   id: string;
@@ -84,6 +94,13 @@ export const ABSENCE_LABELS: Record<AbsenceReason, string> = {
 /** Copia publicada: { empleado_id: { "0": "M", ... } } */
 export type Snapshot = Record<string, Record<string, Slot>>;
 
+/** Ajustes del local que no son reglas del generador. */
+export interface LocalSettings {
+  clockIn: boolean;
+  /** Minutos de margen antes de marcar un retraso o una salida temprana. */
+  clockMarginMinutes: number;
+}
+
 /** Empleado con los datos que no necesita el generador pero sí la interfaz. */
 export interface EmployeeRecord extends Employee {
   phone: string | null;
@@ -92,16 +109,23 @@ export interface EmployeeRecord extends Employee {
 
 const emptyWeek = () => Array<boolean>(DAYS_IN_WEEK).fill(false);
 
-export function toEmployees(rows: EmpleadoRow[], availability: DisponibilidadRow[]): EmployeeRecord[] {
+/**
+ * Filas de empleados → empleados del dominio. `slots` son los códigos de las
+ * franjas del local: cada empleado tiene una semana (vacía si no marca nada) por franja.
+ */
+export function toEmployees(rows: EmpleadoRow[], availability: DisponibilidadRow[], slots: Slot[] = Object.keys(DEFAULT_SHIFTS)): EmployeeRecord[] {
   return rows.map((r) => {
-    const av: Record<Slot, boolean[]> = { M: emptyWeek(), T: emptyWeek(), N: emptyWeek() };
-    for (const a of availability) if (a.empleado_id === r.id) av[a.franja][a.dia] = true;
+    const av: Record<Slot, boolean[]> = Object.fromEntries(slots.map((s) => [s, emptyWeek()]));
+    for (const a of availability) if (a.empleado_id === r.id) (av[a.franja] ??= emptyWeek())[a.dia] = true;
     return {
       id: r.id,
       name: r.nombre,
       role: r.puesto,
       contractHours: r.horas_contrato,
       availability: av,
+      minDaysOff: r.min_dias_libres ?? null,
+      maxConsecutiveClosings: r.max_cierres_seguidos ?? null,
+      preferredDaysOff: r.prefiere_librar ?? [],
       phone: r.telefono,
       token: r.token_acceso,
     };
@@ -114,8 +138,8 @@ export function toRoles(rows: PuestoRow[]): Role[] {
 
 export function availabilityToRows(employeeId: string, availability: Record<Slot, boolean[]>): DisponibilidadRow[] {
   const rows: DisponibilidadRow[] = [];
-  for (const franja of SLOTS) {
-    availability[franja].forEach((ok, dia) => {
+  for (const [franja, week] of Object.entries(availability)) {
+    week.forEach((ok, dia) => {
       if (ok) rows.push({ empleado_id: employeeId, dia, franja });
     });
   }
@@ -134,7 +158,7 @@ export function rowsToDemand(rows: DemandaRow[]): Demand {
 export function demandToRows(demand: Demand): DemandaRow[] {
   const rows: DemandaRow[] = [];
   demand.forEach((day, dia) => {
-    for (const franja of SLOTS) {
+    for (const franja of Object.keys(day)) {
       for (const [puesto, cantidad] of Object.entries(day[franja] ?? {})) {
         if (cantidad > 0) rows.push({ dia, franja, puesto, cantidad });
       }
@@ -145,7 +169,7 @@ export function demandToRows(demand: Demand): DemandaRow[] {
 
 export function rowsToGrid(employeeIds: string[], turnos: TurnoRow[]): Grid {
   const grid: Grid = {};
-  for (const id of employeeIds) grid[id] = Array<Code>(DAYS_IN_WEEK).fill("L");
+  for (const id of employeeIds) grid[id] = Array<Code>(DAYS_IN_WEEK).fill(FREE);
   for (const t of turnos) if (grid[t.empleado_id]) grid[t.empleado_id][t.dia] = t.franja;
   return grid;
 }
@@ -154,7 +178,7 @@ export function gridToTurnos(grid: Grid): TurnoRow[] {
   const rows: TurnoRow[] = [];
   for (const [empleado_id, codes] of Object.entries(grid)) {
     codes.forEach((c, dia) => {
-      if (c !== "L") rows.push({ empleado_id, dia, franja: c });
+      if (c !== FREE) rows.push({ empleado_id, dia, franja: c });
     });
   }
   return rows;
@@ -181,17 +205,22 @@ export function absencesForWeek(rows: AusenciaRow[], monday: string): AbsenceMap
   return map;
 }
 
+/** Franjas del local (activas y archivadas). Sin filas, las de por defecto. */
 export function franjasToCatalog(rows: FranjaRow[]): ShiftCatalog {
-  const catalog: ShiftCatalog = { ...DEFAULT_SHIFTS };
-  for (const r of rows) {
+  if (!rows.length) return { ...DEFAULT_SHIFTS };
+  const catalog: ShiftCatalog = {};
+  rows.forEach((r, i) => {
     catalog[r.franja] = {
       code: r.franja,
       label: r.etiqueta,
       start: r.inicio.slice(0, 5), // "09:00:00" → "09:00"
       end: r.fin.slice(0, 5),
       hours: Number(r.horas),
+      closing: r.cierre ?? r.franja === "N",
+      order: r.orden ?? i,
+      active: r.activa ?? true,
     };
-  }
+  });
   return catalog;
 }
 
@@ -200,5 +229,31 @@ export function localToRules(local: LocalRow): Rules {
     maxConsecutiveNights: local.max_noches_seguidas ?? DEFAULT_RULES.maxConsecutiveNights,
     minRestHours: local.descanso_minimo_horas ?? DEFAULT_RULES.minRestHours,
     minDaysOff: local.min_dias_libres ?? DEFAULT_RULES.minDaysOff,
+    maxExtraHours: local.horas_extra_max ?? DEFAULT_RULES.maxExtraHours,
   };
+}
+
+export function localToSettings(local: LocalRow): LocalSettings {
+  return { clockIn: Boolean(local.fichaje_activo), clockMarginMinutes: local.fichaje_margen_minutos ?? 10 };
+}
+
+/** Fila de fichaje tal como llega de la base de datos. */
+export interface FichajeRow {
+  id: string;
+  empleado_id: string;
+  entrada: string;
+  salida: string | null;
+  sin_salida: boolean;
+  editado: boolean;
+}
+
+export function toClockRecords(rows: FichajeRow[]): ClockRecord[] {
+  return rows.map((f) => ({
+    id: f.id,
+    employeeId: f.empleado_id,
+    start: f.entrada,
+    end: f.salida,
+    missingEnd: f.sin_salida,
+    edited: f.editado,
+  }));
 }

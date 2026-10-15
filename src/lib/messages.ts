@@ -4,7 +4,7 @@ import type { Code, ShiftCatalog } from "./schedule/types";
 /** "Mar 13 · 17:00–01:00 (Noche)" por cada día trabajado. */
 export function shiftLines(row: Code[], shifts: ShiftCatalog, monday: string): string[] {
   return row.flatMap((c, d) =>
-    c === "L" ? [] : [`${DAY_SHORT[d]} ${dayOfMonth(monday, d)} · ${shifts[c].start}–${shifts[c].end} (${shifts[c].label})`],
+    c === "L" || !shifts[c] ? [] : [`${DAY_SHORT[d]} ${dayOfMonth(monday, d)} · ${shifts[c].start}–${shifts[c].end} (${shifts[c].label})`],
   );
 }
 

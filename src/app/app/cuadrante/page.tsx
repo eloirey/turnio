@@ -21,7 +21,7 @@ async function Content({ searchParams }: { searchParams: Search }) {
   const [bundle, week, baseUrl] = await Promise.all([requireLocal(), getWeekData(monday), getBaseUrl()]);
   if (!week) return null; // sin local: requireLocal ya ha redirigido
 
-  const { local, employees, roles, demand, shifts, rules } = bundle;
+  const { local, employees, roles, demand, shifts, rules, settings } = bundle;
   const ids = employees.map((e) => e.id);
 
   return (
@@ -53,6 +53,11 @@ async function Content({ searchParams }: { searchParams: Search }) {
         isCurrent: monday === thisMonday,
       }}
       onboarding={{ anyPublished: week.anyPublished, previousWeekHasShifts: week.previousWeekHasShifts }}
+      clock={
+        settings.clockIn
+          ? { records: week.clock, now: new Date().toISOString(), marginMinutes: settings.clockMarginMinutes, today: todayInMadrid() }
+          : undefined
+      }
     />
   );
 }

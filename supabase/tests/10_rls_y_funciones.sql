@@ -19,8 +19,15 @@ insert into public.empleados (id, local_id, nombre, puesto, horas_contrato) valu
 insert into public.semanas (id, local_id, fecha_inicio)
 values ('5e000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-12');
 
+-- Desde v3 las franjas las crea crear_local; aquí el local se crea a mano.
+-- (antes de v3 las crea un disparador; por eso "on conflict do nothing").
+insert into public.franjas (local_id, franja, etiqueta, inicio, fin, horas) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'M', 'Mañana', '09:00', '17:00', 8),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'T', 'Tarde', '13:00', '21:00', 8),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'N', 'Noche', '17:00', '01:00', 8)
+on conflict do nothing;
 do $$ begin
-  if (select count(*) from public.franjas) <> 3 then raise exception 'faltan las franjas por defecto'; end if;
+  if (select count(*) from public.franjas) <> 3 then raise exception 'faltan las franjas'; end if;
 end $$;
 
 -- ---------- guardar_cuadrante ----------

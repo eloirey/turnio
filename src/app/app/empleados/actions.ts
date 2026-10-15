@@ -2,39 +2,34 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { isValidISODate } from "@/lib/dates";
+import { isValidISODate, mondayOf, todayInMadrid } from "@/lib/dates";
 import { availabilityToRows } from "@/lib/data/mappers";
 import { requireLocal, requireUser } from "@/lib/data/queries";
+import { employeeSchema, firstError, type EmployeeInput } from "@/lib/forms";
+import { activeSlots } from "@/lib/schedule/types";
 import { createClient } from "@/lib/supabase/server";
 
-const week = z.array(z.boolean()).length(7);
+export type { EmployeeInput };
 
-const employeeSchema = z.object({
-  id: z.uuid().optional(),
-  nombre: z.string().trim().min(1, "Escribe el nombre").max(80),
-  puesto: z.string().min(1, "Elige un puesto"),
-  horasContrato: z.number({ error: "Indica las horas de contrato" }).int("Las horas deben ser un número entero").min(1, "Las horas deben ser al menos 1").max(60, "Máximo 60 horas"),
-  telefono: z
-    .string()
-    .trim()
-    .max(20)
-    .optional()
-    .transform((v) => (v ? v : null)),
-  availability: z.object({ M: week, T: week, N: week }),
-});
-
-export type EmployeeInput = z.input<typeof employeeSchema>;
-export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
+export type ActionResult = { ok: true; id: string; archived?: boolean } | { ok: false; error: string };
 
 export async function saveEmployee(input: EmployeeInput): Promise<ActionResult> {
-  const { local, roles } = await requireLocal();
+  const { local, roles, shifts } = await requireLocal();
   const parsed = employeeSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-  const { id, nombre, puesto, horasContrato, telefono, availability } = parsed.data;
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  const { id, nombre, puesto, horasContrato, telefono, availability, minDaysOff, maxConsecutiveClosings, preferredDaysOff } = parsed.data;
   if (!roles.some((r) => r.key === puesto)) return { ok: false, error: "Ese puesto no existe. Créalo en Ajustes." };
 
   const supabase = await createClient();
-  const fields = { nombre, puesto, horas_contrato: horasContrato, telefono };
+  const fields = {
+    nombre,
+    puesto,
+    horas_contrato: horasContrato,
+    telefono: telefono || null,
+    min_dias_libres: minDaysOff ?? null,
+    max_cierres_seguidos: maxConsecutiveClosings ?? null,
+    prefiere_librar: [...new Set(preferredDaysOff ?? [])].sort(),
+  };
 
   let employeeId = id;
   if (employeeId) {
@@ -50,10 +45,12 @@ export async function saveEmployee(input: EmployeeInput): Promise<ActionResult> 
     employeeId = data.id as string;
   }
 
-  // Disponibilidad: se sustituye entera (borrar + insertar).
+  // Disponibilidad: se sustituye entera (borrar + insertar), solo con franjas activas.
+  const active = new Set(activeSlots(shifts));
+  const clean = Object.fromEntries(Object.entries(availability).filter(([slot]) => active.has(slot)));
   const { error: delErr } = await supabase.from("disponibilidad").delete().eq("empleado_id", employeeId);
   if (delErr) return { ok: false, error: "Se guardaron los datos, pero no la disponibilidad." };
-  const rows = availabilityToRows(employeeId, availability);
+  const rows = availabilityToRows(employeeId, clean);
   if (rows.length) {
     const { error: insErr } = await supabase.from("disponibilidad").insert(rows);
     if (insErr) return { ok: false, error: "Se guardaron los datos, pero no la disponibilidad." };
@@ -63,10 +60,36 @@ export async function saveEmployee(input: EmployeeInput): Promise<ActionResult> 
   return { ok: true, id: employeeId };
 }
 
+/**
+ * Quita a una persona del equipo. Si tiene fichajes, se archiva en vez de
+ * borrarse: la ley obliga a conservar el registro de jornada cuatro años.
+ * Al archivarla, su enlace deja de funcionar y se quitan sus turnos futuros.
+ */
 export async function deleteEmployee(id: string): Promise<ActionResult> {
   const { local } = await requireLocal();
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Persona no válida." };
   const supabase = await createClient();
+
+  const { count } = await supabase.from("fichajes").select("id", { count: "exact", head: true }).eq("empleado_id", id);
+  if (count && count > 0) {
+    const { error } = await supabase.from("empleados").update({ activo: false }).eq("id", id).eq("local_id", local.id);
+    if (error) return { ok: false, error: "No se ha podido quitar del equipo." };
+    const monday = mondayOf(todayInMadrid());
+    const { data: weeks } = await supabase.from("semanas").select("id").eq("local_id", local.id).gte("fecha_inicio", monday);
+    if (weeks?.length) {
+      await supabase
+        .from("turnos")
+        .delete()
+        .eq("empleado_id", id)
+        .in(
+          "semana_id",
+          weeks.map((w) => w.id),
+        );
+    }
+    revalidatePath("/app", "layout");
+    return { ok: true, id, archived: true };
+  }
+
   const { error } = await supabase.from("empleados").delete().eq("id", id).eq("local_id", local.id);
   if (error) return { ok: false, error: "No se ha podido eliminar." };
   revalidatePath("/app", "layout");
@@ -83,7 +106,9 @@ const absenceSchema = z
   })
   .refine((a) => a.hasta >= a.desde, { message: "La fecha de fin no puede ser anterior a la de inicio" });
 
-export async function addAbsence(input: z.input<typeof absenceSchema>): Promise<ActionResult> {
+export type AbsenceInput = z.input<typeof absenceSchema>;
+
+export async function addAbsence(input: AbsenceInput): Promise<ActionResult> {
   await requireUser();
   const parsed = absenceSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };

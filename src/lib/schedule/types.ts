@@ -5,24 +5,42 @@
  * Así un cuadrante semanal es siempre un array de 7 posiciones.
  */
 
-/** Franjas de trabajo: Mañana, Tarde, Noche. */
-export type Slot = "M" | "T" | "N";
+/**
+ * Código de una franja. Cada local crea las suyas ("M", "L12", "P1"…);
+ * "L" está reservado para "Libre".
+ */
+export type Slot = string;
 
-/** Lo que puede haber en una casilla del cuadrante: una franja o Libre. */
-export type Code = Slot | "L";
+/** Lo que puede haber en una casilla del cuadrante: el código de una franja o "L" (libre). */
+export type Code = Slot;
 
-export const SLOTS: readonly Slot[] = ["M", "T", "N"] as const;
+export const FREE = "L";
 export const DAYS_IN_WEEK = 7;
+export const MAX_SLOTS = 8;
 
 export interface ShiftDef {
   code: Slot;
-  label: string; // "Mañana"
+  label: string; // "Mañana", "Línea 12"…
   start: string; // "09:00"
-  end: string; // "17:00" (si es menor que start, termina al día siguiente)
+  end: string; // "17:00" (si es menor o igual que start, termina al día siguiente)
   hours: number;
+  /** Cuenta como "cierre" para la regla de cierres seguidos (p. ej. la noche). */
+  closing: boolean;
+  /** Posición en pantalla. */
+  order: number;
+  /** Las franjas archivadas siguen en el catálogo para mostrar semanas antiguas. */
+  active: boolean;
 }
 
 export type ShiftCatalog = Record<Slot, ShiftDef>;
+
+/** Códigos de las franjas activas, en el orden del local. */
+export function activeSlots(shifts: ShiftCatalog): Slot[] {
+  return Object.values(shifts)
+    .filter((s) => s.active)
+    .sort((a, b) => a.order - b.order || a.code.localeCompare(b.code))
+    .map((s) => s.code);
+}
 
 export interface Employee {
   id: string;
@@ -32,6 +50,11 @@ export interface Employee {
   contractHours: number;
   /** availability[franja][día] === true si puede trabajar esa franja ese día. */
   availability: Record<Slot, boolean[]>;
+  /** Reglas propias (si no hay, se usan las del local). */
+  minDaysOff?: number | null;
+  maxConsecutiveClosings?: number | null;
+  /** Días que prefiere librar (0 = lunes). El generador intenta respetarlos. */
+  preferredDaysOff?: number[];
 }
 
 /**
@@ -52,12 +75,14 @@ export type Grid = Record<string, Code[]>;
 export type AbsenceMap = Record<string, (string | null)[]>;
 
 export interface Rules {
-  /** Máximo de noches (cierres) seguidas. Por defecto 2. */
+  /** Máximo de cierres (franjas marcadas como cierre) seguidos. Por defecto 2. */
   maxConsecutiveNights: number;
   /** Horas mínimas de descanso entre el fin de una jornada y el inicio de la siguiente (Estatuto: 12). */
   minRestHours: number;
   /** Días libres mínimos por semana. */
   minDaysOff: number;
+  /** Horas que se pueden pasar del contrato en una semana (horas extra). */
+  maxExtraHours: number;
 }
 
 export interface Gap {

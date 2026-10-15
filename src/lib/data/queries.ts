@@ -2,12 +2,14 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Role } from "@/lib/roles";
-import type { AbsenceMap, Demand, Grid, Rules, ShiftCatalog } from "@/lib/schedule/types";
+import type { ClockChange, ClockRecord } from "@/lib/fichajes";
+import { activeSlots, type AbsenceMap, type Demand, type Grid, type Rules, type ShiftCatalog } from "@/lib/schedule/types";
 import { createClient } from "@/lib/supabase/server";
 import {
   absencesForWeek,
   franjasToCatalog,
   localToRules,
+  localToSettings,
   rowsToDemand,
   rowsToGrid,
   toEmployees,
@@ -19,9 +21,14 @@ import {
   type EmployeeRecord,
   type FranjaRow,
   type LocalRow,
+  type LocalSettings,
   type PuestoRow,
+  toClockRecords,
+  type FichajeRow,
   type TurnoRow,
 } from "./mappers";
+
+export { toClockRecords, type FichajeRow };
 
 /**
  * Lecturas del encargado. Todas usan el cliente con su sesión, así que la
@@ -49,6 +56,7 @@ export async function requireUser(): Promise<string> {
 export interface LocalBundle {
   local: LocalRow;
   rules: Rules;
+  settings: LocalSettings;
   roles: Role[];
   employees: EmployeeRecord[];
   demand: Demand;
@@ -70,16 +78,19 @@ export const getLocalBundle = cache(async (): Promise<LocalBundle | null> => {
   if (error) throw error;
   if (!data) return null;
   const d = data as CargarLocal;
+  const shifts = franjasToCatalog(d.franjas);
   return {
     local: d.local,
     rules: localToRules(d.local),
+    settings: localToSettings(d.local),
     roles: toRoles(d.puestos),
     employees: toEmployees(
       d.empleados,
       d.empleados.flatMap((e) => e.disponibilidad),
+      activeSlots(shifts),
     ),
     demand: rowsToDemand(d.demanda),
-    shifts: franjasToCatalog(d.franjas),
+    shifts,
   };
 });
 
@@ -109,6 +120,7 @@ export interface WeekData {
   turnos: TurnoRow[];
   requests: PendingRequest[];
   absenceRows: AusenciaRow[];
+  clock: ClockRecord[];
   previousWeekHasShifts: boolean;
   anyPublished: boolean;
 }
@@ -118,6 +130,7 @@ interface CargarSemana {
   turnos: TurnoRow[];
   solicitudes: { id: string; tipo: "librar" | "intercambio"; dia: number; mensaje: string | null; empleado_id: string; con_empleado_id: string | null }[];
   ausencias: AusenciaRow[];
+  fichajes?: FichajeRow[];
   semana_anterior_con_turnos: boolean;
   alguna_publicada: boolean;
 }
@@ -143,6 +156,7 @@ export async function getWeekData(monday: string): Promise<WeekData | null> {
       conEmpleadoId: s.con_empleado_id,
     })),
     absenceRows: d.ausencias,
+    clock: toClockRecords(d.fichajes ?? []),
     previousWeekHasShifts: d.semana_anterior_con_turnos,
     anyPublished: d.alguna_publicada,
   };
@@ -166,4 +180,40 @@ export async function getUpcomingAbsences(fromISO: string): Promise<AusenciaRow[
     .order("desde");
   if (error) throw error;
   return (data ?? []) as AusenciaRow[];
+}
+
+export interface ClockPeriod {
+  records: ClockRecord[];
+  /** Turnos previstos con su fecha. */
+  planned: { employeeId: string; date: string; slot: string }[];
+  /** Personas que ya no están en el equipo pero ficharon en el periodo. */
+  archived: { id: string; name: string; role: string }[];
+  changes: ClockChange[];
+}
+
+/** Fichajes, turnos previstos e historial de cambios entre dos fechas (incluidas). */
+export async function getClockPeriod(from: string, to: string): Promise<ClockPeriod> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("cargar_fichajes", { p_desde: from, p_hasta: to });
+  if (error) throw error;
+  const d = (data ?? { fichajes: [], turnos: [], archivados: [], cambios: [] }) as {
+    fichajes: FichajeRow[];
+    turnos: { empleado_id: string; fecha: string; franja: string }[];
+    archivados: { id: string; nombre: string; puesto: string }[];
+    cambios: { fichaje_id: string; empleado_id: string; accion: ClockChange["action"]; antes: ClockChange["before"]; despues: ClockChange["after"]; motivo: string; fecha: string }[];
+  };
+  return {
+    records: toClockRecords(d.fichajes),
+    planned: d.turnos.map((t) => ({ employeeId: t.empleado_id, date: t.fecha, slot: t.franja })),
+    archived: d.archivados.map((a) => ({ id: a.id, name: a.nombre, role: a.puesto })),
+    changes: d.cambios.map((c) => ({
+      recordId: c.fichaje_id,
+      employeeId: c.empleado_id,
+      action: c.accion,
+      before: c.antes,
+      after: c.despues,
+      reason: c.motivo,
+      at: c.fecha,
+    })),
+  };
 }

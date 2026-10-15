@@ -59,6 +59,53 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   return { message: `Te hemos enviado un email a ${parsed.data.email}. Abre el enlace para activar tu cuenta.`, email };
 }
 
+/** Entrar (o registrarse) con Google. Supabase devuelve la URL de Google y volvemos a /auth/callback. */
+export async function signInWithGoogle(): Promise<AuthState> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${await getBaseUrl()}/auth/callback?next=/app` },
+  });
+  if (error || !data.url) return { error: "No se ha podido conectar con Google. Inténtalo de nuevo." };
+  redirect(data.url);
+}
+
+const emailOnly = z.object({ email: z.email("Escribe un email válido") });
+
+/** Envía el email para elegir una contraseña nueva. Siempre responde lo mismo (no revela si la cuenta existe). */
+export async function requestPasswordReset(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "");
+  const parsed = emailOnly.safeParse({ email });
+  if (!parsed.success) return { error: parsed.error.issues[0].message, email };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${await getBaseUrl()}/auth/callback?next=/nueva-contrasena`,
+  });
+  if (error && error.message.toLowerCase().includes("rate limit")) return { error: translate(error.message), email };
+  return { message: `Si hay una cuenta con ${parsed.data.email}, te llegará un email con un enlace para elegir una contraseña nueva.`, email };
+}
+
+const newPassword = z
+  .object({
+    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(72, "Contraseña demasiado larga"),
+    repeat: z.string(),
+  })
+  .refine((v) => v.password === v.repeat, { message: "Las dos contraseñas no coinciden" });
+
+export async function updatePassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const parsed = newPassword.safeParse({ password: formData.get("password"), repeat: formData.get("repeat") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) {
+    const m = error.message.toLowerCase();
+    if (m.includes("session") || m.includes("jwt")) return { error: "El enlace ha caducado. Pide uno nuevo desde «He olvidado mi contraseña»." };
+    if (m.includes("different")) return { error: "La contraseña nueva tiene que ser distinta de la anterior." };
+    return { error: translate(error.message) };
+  }
+  redirect("/app/cuadrante");
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

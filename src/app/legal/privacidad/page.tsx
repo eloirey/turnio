@@ -20,18 +20,24 @@ export default function PrivacidadPage() {
       <h2>2. Qué datos tratamos</h2>
       <ul>
         <li>
-          <strong>Del encargado o titular de la cuenta:</strong> email y contraseña (cifrada) para acceder, y el nombre del negocio.
+          <strong>Del encargado o titular de la cuenta:</strong> email y contraseña (cifrada) para acceder —o los datos básicos de tu cuenta de Google si entras
+          con ella—, y el nombre del negocio.
         </li>
         <li>
           <strong>De los empleados</strong>, introducidos por la empresa: nombre, puesto, horas de contrato, disponibilidad, teléfono (opcional), turnos asignados,
           ausencias (vacaciones, bajas o permisos, sin indicar diagnósticos médicos) y las solicitudes de cambio que realicen.
         </li>
+        <li>
+          <strong>Registro de jornada</strong> (si la empresa activa el fichaje): hora de entrada y salida de cada tramo trabajado y, si el encargado corrige un
+          fichaje, la hora original, la nueva y el motivo. No se guarda la ubicación.
+        </li>
       </ul>
 
       <h2>3. Para qué los usamos</h2>
       <p>
-        Únicamente para prestar el servicio: generar y publicar cuadrantes de turnos, mostrar a cada empleado su horario y gestionar solicitudes de cambio. No
-        vendemos datos ni los usamos para publicidad.
+        Únicamente para prestar el servicio: generar y publicar cuadrantes de turnos, mostrar a cada empleado su horario, gestionar solicitudes de cambio y, si
+        la empresa lo activa, llevar el registro de jornada que exige el artículo 34.9 del Estatuto de los Trabajadores. No vendemos datos ni los usamos para
+        publicidad.
       </p>
 
       <h2>4. Base legal</h2>
@@ -56,7 +62,9 @@ export default function PrivacidadPage() {
 
       <h2>6. Cuánto tiempo los guardamos</h2>
       <p>
-        Mientras la cuenta esté activa. Si la cuenta se elimina, borramos los datos en un plazo máximo de [30] días, salvo obligación legal de conservarlos.
+        Mientras la cuenta esté activa. El registro de jornada se conserva cuatro años, como exige la ley, aunque la persona deje la empresa. Si el titular borra
+        la cuenta desde Ajustes, se eliminan todos los datos del negocio, incluido el registro de jornada: la empresa debe descargarlo antes si necesita
+        conservarlo.
       </p>
 
       <h2>7. Tus derechos</h2>
