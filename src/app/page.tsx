@@ -3,7 +3,8 @@ import { Logo, LogoMark } from "@/components/Logo";
 import { ui } from "@/components/ui";
 import { PALETTE } from "@/lib/roles";
 import { SECTOR_TEMPLATES } from "@/lib/schedule/templates";
-import { ClockPreview, HeroPreview, RulesPreview, ShiftsPreview, WhatsAppPreview } from "./_landing/Previews";
+import { HeroDemo } from "./_landing/HeroDemo";
+import { ClockPreview, RulesPreview, ShiftsPreview, WhatsAppPreview } from "./_landing/Previews";
 
 export const metadata = {
   title: "Rotafy — El cuadrante de turnos en 1 minuto, con fichaje incluido",
@@ -124,7 +125,7 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-            <HeroPreview />
+            <HeroDemo />
           </div>
         </section>
 
