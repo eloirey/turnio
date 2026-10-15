@@ -16,7 +16,7 @@ import { ClockIntro } from "@/app/app/fichajes/ClockIntro";
 import { FichajesBoard, type ClockActions } from "@/app/app/fichajes/FichajesBoard";
 import { NecesidadesEditor } from "@/app/app/necesidades/NecesidadesEditor";
 import { OnboardingForm } from "@/app/bienvenida/OnboardingForm";
-import { absencesForWeek } from "@/lib/data/mappers";
+import { absencesForWeek, gridToTurnos } from "@/lib/data/mappers";
 import { addDays, dayOfMonth, isValidISODate } from "@/lib/dates";
 import { clockCsv, dayStatus, groupByEmployeeDay, madridToIso, type ClockRecord } from "@/lib/fichajes";
 import { employeeSchema, firstError, necesidadesSchema, settingsSchema } from "@/lib/forms";
@@ -266,8 +266,21 @@ export function DemoApp() {
         update((st) => ({ ...st, status: "publicado", published: true }));
         return { ok: true as const };
       },
-      acceptRequest: async () => ({ ok: false as const, error: "En la demo no hay solicitudes." }),
-      rejectRequest: async () => ({ ok: false as const, error: "En la demo no hay solicitudes." }),
+      acceptRequest: async (id: string) => {
+        const st = stateRef.current!;
+        const r = st.requests.find((x) => x.id === id);
+        if (!r) return { ok: false as const, error: "Esa solicitud ya no está pendiente." };
+        const grid = normalizeGrid(st.grid, st.employees);
+        const row = [...(grid[r.empleadoId] ?? [])];
+        if (r.tipo === "librar") row[r.dia] = "L";
+        const next = { ...grid, [r.empleadoId]: row };
+        update((s2) => ({ ...s2, grid: next, requests: s2.requests.filter((x) => x.id !== id), status: s2.published ? "cambios" : s2.status }));
+        return { ok: true as const, turnos: gridToTurnos(next) };
+      },
+      rejectRequest: async (id: string) => {
+        update((s2) => ({ ...s2, requests: s2.requests.filter((x) => x.id !== id) }));
+        return { ok: true as const };
+      },
     }),
     [],
   );
@@ -321,6 +334,7 @@ export function DemoApp() {
 
   const ids = state.employees.map((e) => e.id);
   // Avisos de ejemplo para la campanita (en la app de verdad llegan solos).
+  // Es la misma persona que tiene la solicitud de ejemplo pendiente en el cuadrante.
   const someone = state.employees[2]?.name ?? state.employees[0]?.name ?? "Laura";
   const demoAvisosItems: Aviso[] = [
     { id: "d1", tipo: "solicitud", titulo: `${someone} pide librar el viernes ${dayOfMonth(state.monday, 4)}`, cuerpo: "Tengo médico por la mañana.", enlace: "/app/cuadrante", creadoEn: new Date(Date.parse(state.now) - 25 * 60_000).toISOString(), leido: avisosRead },
@@ -411,6 +425,7 @@ export function DemoApp() {
         )}
         {tab === "cuadrante" && (
           <Cuadrante
+            requests={state.requests}
             employees={state.employees}
             roles={state.roles}
             demand={state.demand}

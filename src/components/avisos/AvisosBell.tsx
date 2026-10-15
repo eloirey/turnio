@@ -37,16 +37,20 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
   const navigate = useNavigate();
   const router = useRouter();
 
+  const lastUnread = useRef(initial?.unread ?? 0);
   const refresh = useCallback(async () => {
     try {
       const res = await load();
       if (!res.ok) return;
       setItems(res.items);
       setUnread(res.unread);
+      // Si ha llegado algo nuevo, la pantalla se actualiza (por ejemplo, una solicitud en el cuadrante).
+      if (res.unread > lastUnread.current && !navigate) router.refresh();
+      lastUnread.current = res.unread;
     } catch {
       // sin conexión: ya lo intentará otra vez
     }
-  }, [load]);
+  }, [load, navigate, router]);
 
   useEffect(() => {
     const first = initial ? undefined : window.setTimeout(refresh, 0);
@@ -86,6 +90,7 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
     if (unread > 0) {
       // Se marcan como leídos, pero se siguen viendo resaltados mientras está abierto.
       setUnread(0);
+      lastUnread.current = 0;
       markRead().catch(() => undefined);
     }
   }
@@ -94,6 +99,8 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
     setOpen(false);
     if (/^https:\/\//.test(link)) window.open(link, "_blank", "noopener,noreferrer");
     else if (navigate) navigate(link);
+    // Ya estás en esa pantalla: se vuelve a cargar para ver lo último.
+    else if (link === window.location.pathname + window.location.search) router.refresh();
     else router.push(link);
   }
 

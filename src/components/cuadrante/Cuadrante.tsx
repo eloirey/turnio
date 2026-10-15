@@ -93,6 +93,12 @@ export function Cuadrante(props: Props) {
   );
   const [status, setStatus] = useState<WeekStatus>(props.initialStatus ?? "borrador");
   const [requests, setRequests] = useState<CuadranteRequest[]>(props.requests ?? []);
+  // Si llegan solicitudes nuevas del servidor (por ejemplo, al abrir un aviso), se ven al momento.
+  const [requestsProp, setRequestsProp] = useState(props.requests);
+  if (props.requests !== requestsProp) {
+    setRequestsProp(props.requests);
+    setRequests(props.requests ?? []);
+  }
   const [sel, setSel] = useState<Selection | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [busy, setBusy] = useState(false);

@@ -35,6 +35,17 @@ export interface DemoState {
   today: string;
   now: string;
   seq: number;
+  /** Solicitudes pendientes del equipo (la demo trae una para probar). */
+  requests: DemoRequest[];
+}
+
+export interface DemoRequest {
+  id: string;
+  tipo: "librar" | "intercambio";
+  dia: number;
+  mensaje: string | null;
+  empleadoId: string;
+  conEmpleadoId: string | null;
 }
 
 /** Número pseudoaleatorio estable (la demo sale igual cada vez). */
@@ -59,6 +70,8 @@ export function createDemoState(input: { nombre: string; tipo: string; puestos: 
   const team = templateTeam(t, roles, shifts);
   const employees: EmployeeRecord[] = team.map((e, i) => ({ ...e, token: hex32(`${e.name}-${i}`), phone: e.phone }));
   const last = employees[employees.length - 1];
+  // La misma persona que sale en la campanita de la demo pide librar el viernes.
+  const asker = employees[2] ?? employees[0];
   return {
     name: input.nombre,
     tipo: input.tipo,
@@ -79,6 +92,7 @@ export function createDemoState(input: { nombre: string; tipo: string; puestos: 
     today,
     now: madridToIso(today, "18:30"),
     seq: 1,
+    requests: asker ? [{ id: "sol-1", tipo: "librar", dia: 4, mensaje: "Tengo médico por la mañana.", empleadoId: asker.id, conEmpleadoId: null }] : [],
   };
 }
 
