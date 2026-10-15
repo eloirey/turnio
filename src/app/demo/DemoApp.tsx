@@ -388,7 +388,7 @@ export function DemoApp() {
         </div>
 
         {tab === "empleados" && (
-          <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
+          <main className="anim-page mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
             <EmpleadosManager
               employees={state.employees}
               roles={state.roles}
@@ -404,7 +404,7 @@ export function DemoApp() {
           </main>
         )}
         {tab === "necesidades" && (
-          <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
+          <main className="anim-page mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
             <NecesidadesEditor
               key={JSON.stringify(state.roles.map((r) => r.key))}
               initialDemand={state.demand}
@@ -420,7 +420,7 @@ export function DemoApp() {
           </main>
         )}
         {tab === "ajustes" && (
-          <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-8">
+          <main className="anim-page mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-8">
             <h1 className={`${ui.h1} mb-6`}>Ajustes</h1>
             <AjustesForms localName={state.name} roles={state.roles} rules={state.rules} settings={state.settings} usage={usage} actions={settingsActions} />
           </main>

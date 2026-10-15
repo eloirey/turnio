@@ -64,7 +64,7 @@ async function EmployeeSchedule({ params }: { params: Params }) {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 px-5 pb-10 pt-6">
+    <main className="anim-page mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 px-5 pb-10 pt-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-[30px] font-bold leading-tight tracking-tight">Hola, {me.nombre}</h1>

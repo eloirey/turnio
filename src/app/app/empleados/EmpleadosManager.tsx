@@ -291,45 +291,46 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
             <h2 className={ui.h2}>Disponibilidad</h2>
             <p className="mb-4 mt-1 text-sm text-ink-soft">Marca cuándo puede trabajar. El generador nunca le pondrá un turno fuera de lo marcado.</p>
             <div className="overflow-x-auto">
-              <div className="flex min-w-[560px] flex-col gap-1.5">
-                <div className="grid grid-cols-[112px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5 text-[13px] font-semibold text-ink-muted">
-                  <span />
+              <div className="flex flex-col gap-3 sm:min-w-[560px] sm:gap-1.5">
+                {/* Días: en el móvil, una fila de 7 sobre las casillas; en el ordenador, con columna de nombre. */}
+                <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-semibold text-ink-muted sm:grid-cols-[112px_repeat(7,minmax(40px,1fr))_76px] sm:gap-1.5 sm:text-[13px]">
+                  <span className="hidden sm:block" />
                   {DAY_SHORT.map((d) => (
-                    <span key={d} className="text-center">
-                      {d}
-                    </span>
+                    <span key={d}>{d}</span>
                   ))}
-                  <span />
+                  <span className="hidden sm:block" />
                 </div>
                 {slots.map((slot) => {
                   const week = draft.availability[slot] ?? Array<boolean>(7).fill(false);
                   const all = week.every(Boolean);
                   return (
-                    <div key={slot} className="grid grid-cols-[112px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5">
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold" title={shifts[slot].label}>
-                          {shifts[slot].label}
+                    <div key={slot} className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[112px_repeat(7,minmax(40px,1fr))_76px] sm:items-center">
+                      <div className="flex items-baseline justify-between gap-2 sm:contents">
+                        <span className="min-w-0">
+                          <span className="truncate text-sm font-semibold sm:block" title={shifts[slot].label}>
+                            {shifts[slot].label}
+                          </span>
+                          <span className="ml-1.5 text-[11px] text-ink-muted tabular-nums sm:ml-0 sm:block">{shiftTimes(shifts[slot])}</span>
                         </span>
-                        <span className="block text-[11px] text-ink-muted tabular-nums">
-                          {shiftTimes(shifts[slot])}
-                        </span>
-                      </span>
-                      {week.map((on, day) => (
-                        <button
-                          key={day}
-                          type="button"
-                          role="checkbox"
-                          aria-checked={on}
-                          aria-label={`${shifts[slot].label} del ${DAY_LONG[day]}`}
-                          onClick={() => toggle(slot, day)}
-                          className={`flex h-11 items-center justify-center rounded-lg border text-base transition ${on ? "border-accent bg-accent text-white" : "border-line-strong bg-surface text-transparent hover:border-ink"}`}
-                        >
-                          ✓
+                        <button type="button" onClick={() => setRow(slot, !all)} className="rounded-lg px-2 text-xs font-semibold text-accent hover:bg-ground sm:order-last sm:h-11 sm:text-ink-muted">
+                          {all ? "Ninguno" : "Todos"}
                         </button>
-                      ))}
-                      <button type="button" onClick={() => setRow(slot, !all)} className="h-11 rounded-lg text-xs font-semibold text-ink-muted hover:bg-ground">
-                        {all ? "Ninguno" : "Todos"}
-                      </button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 sm:contents">
+                        {week.map((on, day) => (
+                          <button
+                            key={day}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={on}
+                            aria-label={`${shifts[slot].label} del ${DAY_LONG[day]}`}
+                            onClick={() => toggle(slot, day)}
+                            className={`flex h-11 items-center justify-center rounded-lg border text-base transition ${on ? "border-accent bg-accent text-white" : "border-line-strong bg-surface text-transparent hover:border-ink"}`}
+                          >
+                            ✓
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   );
                 })}
@@ -493,8 +494,9 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                   {current.name} verá siempre su horario aquí, sin registrarse, podrá fichar y añadirlo a su calendario del móvil. Envíaselo una vez.
                   {isDemo && " (En la demo este enlace no funciona.)"}
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <code className="min-w-0 flex-1 truncate rounded-lg bg-ground px-3 py-2.5 text-sm">{personalLink}</code>
+                  <div className="grid grid-cols-3 gap-2 sm:flex">
                   <button onClick={copyLink} className={`${ui.btnSm} ${ui.secondary}`}>
                     Copiar
                   </button>
@@ -514,6 +516,7 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                   >
                     Telegram
                   </a>
+                  </div>
                 </div>
                 <p className="mt-3 rounded-lg bg-ground px-3 py-2.5 text-[13px] leading-relaxed text-ink-soft">
                   <strong className="text-ink">Es único y no se debe compartir:</strong> quien lo tenga puede ver el horario de {current.name} y fichar a su nombre. Si lo pierde o se lo pasa a alguien,{" "}

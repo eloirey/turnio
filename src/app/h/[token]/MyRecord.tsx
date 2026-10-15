@@ -106,7 +106,7 @@ export function MyRecord({ token, today }: { token: string; today: string }) {
             <div>
               <div className="font-display text-[32px] font-bold leading-none tabular-nums">{formatHours(total)}</div>
               <div className="mt-1 text-[13px] text-ink-muted">
-                {days.length === 0 ? "Sin fichajes" : `${days.length} ${days.length === 1 ? "día" : "días"} trabajados`}
+                {days.length === 0 ? "Sin fichajes" : days.length === 1 ? "1 día trabajado" : `${days.length} días trabajados`}
                 {month === current && " · hasta hoy"}
               </div>
             </div>

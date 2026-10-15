@@ -37,8 +37,8 @@
   --color-barra-ink: #2A4A1C;
 
   /* Tipografía */
-  --font-sans: "DM Sans Variable", system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
 }
 
 body {
@@ -71,6 +71,25 @@ body {
 }
 
 /* Demo: resalta el botón que la guía pide pulsar */
+/* Animaciones de entrada: cortas y sutiles (y ninguna si el sistema pide menos movimiento). */
+@keyframes rf-fade { from { opacity: 0; } }
+@keyframes rf-pop { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+@keyframes rf-up { from { opacity: 0; transform: translateY(18px); } }
+@keyframes rf-right { from { opacity: 0; transform: translateX(28px); } }
+.anim-overlay { animation: rf-fade 0.18s ease-out both; }
+.anim-pop { animation: rf-pop 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-sheet { animation: rf-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-drawer { animation: rf-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-toast { animation: rf-up 0.2s ease-out both; }
+.anim-page { animation: rf-fade 0.22s ease-out both; }
+@media (min-width: 640px) {
+  .anim-sheet { animation-name: rf-pop; animation-duration: 0.18s; }
+  .anim-drawer { animation-name: rf-right; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-overlay, .anim-pop, .anim-sheet, .anim-drawer, .anim-toast, .anim-page { animation: none; }
+}
+
 @keyframes tour-pulse {
   0% { box-shadow: 0 0 0 0 rgba(31, 92, 70, 0.55); }
   70% { box-shadow: 0 0 0 14px rgba(31, 92, 70, 0); }

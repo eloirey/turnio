@@ -29,7 +29,7 @@ export function ClockIntro({ onActivate }: { onActivate?: () => Promise<void> | 
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-8">
+    <main className="anim-page mx-auto w-full max-w-4xl px-4 py-10 sm:px-8">
       <div className={`${ui.card} overflow-hidden`}>
         <div className="grid gap-8 p-6 sm:p-10 md:grid-cols-[1.2fr_1fr] md:items-center">
           <div>

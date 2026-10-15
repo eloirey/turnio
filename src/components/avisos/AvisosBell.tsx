@@ -56,7 +56,8 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
 
   useEffect(() => {
     const first = initial ? undefined : window.setTimeout(refresh, 0);
-    const timer = pollMs ? window.setInterval(refresh, pollMs) : undefined;
+    // Con la pestaña oculta no se pregunta (ahorra batería y servidor); al volver, sí.
+    const timer = pollMs ? window.setInterval(() => document.visibilityState === "visible" && refresh(), pollMs) : undefined;
     const onVisible = () => document.visibilityState === "visible" && refresh();
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -136,7 +137,7 @@ export function AvisosBell({ load, markRead, initial, emptyText = "No tienes avi
             role="dialog"
             aria-label="Avisos"
             style={{ top: pos.top, right: pos.right }}
-            className="fixed z-50 flex max-h-[min(560px,calc(100vh-90px))] w-[min(390px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_24px_60px_-20px_rgba(27,27,26,0.45)] print:hidden"
+            className="anim-pop fixed z-50 flex max-h-[min(560px,calc(100vh-90px))] w-[min(390px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_24px_60px_-20px_rgba(27,27,26,0.45)] print:hidden"
           >
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <h2 className="font-display text-lg font-bold">Avisos</h2>

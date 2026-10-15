@@ -42,6 +42,7 @@ npm install
    3. `20261016000000_v3.sql` (franjas con nombre libre, reglas por persona, horas extra y fichajes).
    4. `20261017000000_v4.sql` (avisos: la campanita del encargado y de cada empleado).
    5. `20261018000000_v5.sql` (lugar al fichar, teletrabajo, turnos partidos, avisos en el móvil y varios encargados).
+   6. `20261019000000_v6.sql` (los días de antes de activar el fichaje no salen como «No fichó», e índices para ir más rápido).
 
    Se pueden ejecutar sobre una base que ya tiene datos: los conservan.
 3. En **Authentication → Sign In / Providers → Email**, mientras desarrollas puedes desactivar *Confirm email* para entrar sin confirmar el correo.
@@ -174,11 +175,13 @@ psql -d rotafy_test -f supabase/migrations/20261015000000_v2.sql
 psql -d rotafy_test -f supabase/migrations/20261016000000_v3.sql
 psql -d rotafy_test -f supabase/migrations/20261017000000_v4.sql
 psql -d rotafy_test -f supabase/migrations/20261018000000_v5.sql
+psql -d rotafy_test -f supabase/migrations/20261019000000_v6.sql
 psql -d rotafy_test -f supabase/tests/10_rls_y_funciones.sql   # debe terminar en "TODAS LAS PRUEBAS ... PASAN"
 psql -d rotafy_test -f supabase/tests/20_v2.sql
 psql -d rotafy_test -f supabase/tests/30_v3.sql                # "TODAS LAS PRUEBAS DE v3 PASAN"
 psql -d rotafy_test -f supabase/tests/40_v4.sql                # "TODAS LAS PRUEBAS DE v4 PASAN"
 psql -d rotafy_test -f supabase/tests/50_v5.sql                # "TODAS LAS PRUEBAS DE v5 PASAN"
+psql -d rotafy_test -f supabase/tests/60_v6.sql                # "TODAS LAS PRUEBAS DE v6 PASAN"
 ```
 
 ## Mandar un anuncio a todos (la campanita)

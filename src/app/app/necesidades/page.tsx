@@ -12,7 +12,7 @@ async function Content() {
 
 export default function NecesidadesPage() {
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
+    <main className="anim-page mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
       <Suspense fallback={<div className={`${ui.card} h-96 animate-pulse`} />}>
         <Content />
       </Suspense>

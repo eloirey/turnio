@@ -88,7 +88,7 @@ export function WeekPicker({ monday, base }: Props) {
       </button>
 
       {open && (
-        <div role="dialog" aria-label="Elegir semana o día" className="absolute left-0 top-full z-40 mt-2 w-[min(340px,calc(100vw-32px))] rounded-2xl border border-line bg-surface p-4 shadow-[0_24px_60px_-20px_rgba(27,27,26,0.45)] print:hidden">
+        <div role="dialog" aria-label="Elegir semana o día" className="anim-pop absolute left-0 top-full z-40 mt-2 w-[min(340px,calc(100vw-32px))] rounded-2xl border border-line bg-surface p-4 shadow-[0_24px_60px_-20px_rgba(27,27,26,0.45)] print:hidden">
           <div className="mb-3 flex items-center justify-between">
             <button type="button" onClick={() => shiftMonth(-1)} aria-label="Mes anterior" className="flex h-9 w-9 items-center justify-center rounded-lg text-lg hover:bg-ground">
               ‹

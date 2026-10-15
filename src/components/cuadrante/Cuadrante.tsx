@@ -61,7 +61,7 @@ interface Props {
   nav?: { prev: string; next: string; today: string; isCurrent: boolean };
   onboarding?: { anyPublished: boolean; previousWeekHasShifts: boolean };
   /** Fichajes de la semana (si el local ficha). `now` llega del servidor para que todos vean lo mismo. */
-  clock?: { records: ClockRecord[]; now: string; marginMinutes: number; today: string };
+  clock?: { records: ClockRecord[]; now: string; marginMinutes: number; today: string; since?: string | null };
   /** Se llama tras generar o publicar (la demo lo usa para avanzar el tutorial). */
   onEvent?: (event: "generated" | "published" | "edited") => void;
   /** Día (0-6) elegido en el calendario: se resalta y se lleva a la vista. */
@@ -328,7 +328,7 @@ export function Cuadrante(props: Props) {
     const code = grid[employeeId]?.[day] ?? FREE;
     const shift = code !== FREE && shifts[code] ? shifts[code] : null;
     if (!shift && !records.length) return null;
-    return { ...dayStatus(date, records, shift, clockNow, clock.marginMinutes), records };
+    return { ...dayStatus(date, records, shift, clockNow, clock.marginMinutes, clock.since), records };
   };
   const clockAttention = clock ? employees.reduce((a, e) => a + Array.from({ length: 7 }, (_, d) => clockStatus(e.id, d)).filter((c) => c && (c.kind === "forgot" || c.kind === "missing")).length, 0) : 0;
   const workedWeek = (employeeId: string) =>
@@ -396,7 +396,7 @@ export function Cuadrante(props: Props) {
   ) : null;
 
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8 print:max-w-none print:p-0">
+    <main className="anim-page mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8 print:max-w-none print:p-0">
       {/* Al imprimir sale una versión pensada para el papel (cabe en un A4 apaisado). */}
       <PrintSchedule
         title={notify?.localName ?? ""}
@@ -466,7 +466,7 @@ export function Cuadrante(props: Props) {
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                <div role="menu" className="absolute left-0 z-40 sm:left-auto sm:right-0 mt-2 w-64 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
+                <div role="menu" className="anim-pop absolute left-0 z-40 sm:left-auto sm:right-0 mt-2 w-64 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
                   {persistence?.copyPrevious && (
                     <MenuItem onClick={copyPrevious} disabled={!onboarding?.previousWeekHasShifts} hint={onboarding?.previousWeekHasShifts ? undefined : "La semana anterior está vacía"}>
                       Copiar semana anterior
@@ -647,7 +647,7 @@ export function Cuadrante(props: Props) {
               <NavLink href="/app/fichajes" className="mb-2 flex w-full items-center gap-2.5 rounded-lg bg-danger-soft/60 px-2 py-2 text-left text-sm hover:bg-danger-soft">
                 <Dot />
                 <span>
-                  <strong>Fichajes:</strong> {clockAttention} {clockAttention === 1 ? "día por revisar" : "días por revisar"}. <span className="text-ink-muted">Ver →</span>
+                  <strong>Fichajes:</strong> {clockAttention} {clockAttention === 1 ? "día por revisar" : "días por revisar"}. <span className="whitespace-nowrap text-ink-muted">Ver →</span>
                 </span>
               </NavLink>
             )}

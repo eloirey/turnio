@@ -84,6 +84,18 @@ describe("estado del día", () => {
   });
 });
 
+describe("desde cuándo se ficha", () => {
+  const now = new Date("2026-10-15T10:00:00Z");
+  it("antes de activar el fichaje, un turno sin fichar no es «No fichó»", () => {
+    expect(dayStatus("2026-10-14", [], NIGHT, now, 10, "2026-10-15").kind).toBe("none");
+    expect(dayStatus("2026-10-14", [], NIGHT, now, 10, "2026-10-14").kind).toBe("missing");
+    expect(dayStatus("2026-10-14", [], NIGHT, now, 10, null).kind).toBe("missing");
+  });
+  it("si hay fichajes de antes, se revisan igual", () => {
+    expect(dayStatus("2026-10-14", [rec("2026-10-14T15:00:00Z", "2026-10-14T23:00:00Z")], NIGHT, now, 10, "2026-10-15").kind).toBe("ok");
+  });
+});
+
 describe("agrupar", () => {
   it("agrupa por persona y día de Madrid", () => {
     const g = groupByEmployeeDay([rec("2026-10-14T22:30:00Z", "2026-10-15T02:00:00Z"), rec("2026-10-14T15:00:00Z", "2026-10-14T18:00:00Z")]);

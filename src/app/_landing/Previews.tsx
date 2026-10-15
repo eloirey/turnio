@@ -242,10 +242,10 @@ export function WhatsAppPreview() {
           Sáb 17 · Tarde 13:00–21:00
           <br />
           <br />
-          Lo tienes siempre aquí: <span className="text-[#027EB5] underline">rotafy.es/h/laura-…</span>
+          Lo tienes siempre aquí: <span className="text-[#00639A] underline">rotafy.es/h/laura-…</span>
           <br />
           <span className="text-[#54656F]">(Es tu enlace personal: no lo compartas.)</span>
-          <span className="mt-1 block text-right text-[10px] text-[#667781]">19:42 ✓✓</span>
+          <span className="mt-1 block text-right text-[11px] text-[#54656F]">19:42 ✓✓</span>
         </div>
       </div>
       <div className="absolute -right-3 top-24 hidden rotate-[4deg] rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[12px] shadow-xl sm:block">

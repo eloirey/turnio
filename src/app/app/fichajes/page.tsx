@@ -37,6 +37,7 @@ async function Content({ searchParams }: { searchParams: Search }) {
       today={today}
       now={new Date().toISOString()}
       marginMinutes={bundle.settings.clockMarginMinutes}
+      clockSince={bundle.settings.clockSince}
       nav={{
         prev: `/app/fichajes?semana=${addDays(monday, -7)}`,
         next: `/app/fichajes?semana=${addDays(monday, 7)}`,

@@ -49,12 +49,12 @@ export function CellEditor(props: {
 
   return (
     <>
-      <div className={`fixed inset-0 z-40 ${mobile ? "bg-black/30" : ""}`} onClick={onClose} />
+      <div className={`fixed inset-0 z-40 ${mobile ? "anim-overlay bg-black/30" : ""}`} onClick={onClose} />
       <div
         role="dialog"
         aria-label={`Cambiar turno de ${employee.name}`}
         style={style}
-        className={`fixed z-50 border border-line bg-surface p-4 shadow-xl ${mobile ? "inset-x-0 bottom-0 rounded-t-2xl pb-6" : "rounded-2xl"}`}
+        className={`fixed z-50 border border-line bg-surface p-4 shadow-xl ${mobile ? "anim-sheet inset-x-0 bottom-0 rounded-t-2xl pb-6" : "anim-pop rounded-2xl"}`}
       >
         <div className="mb-3 flex items-start justify-between gap-2">
           <div>

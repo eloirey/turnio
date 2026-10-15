@@ -109,10 +109,10 @@ export default function Home() {
                 contratos, avisa a cada persona en su móvil y lleva el <strong className="font-semibold text-ink">registro de jornada que exige la ley</strong>.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <Link href="/login" className={`${ui.btn} ${ui.primary} h-[52px] px-7 text-base shadow-[0_10px_30px_-10px_rgba(31,92,70,0.7)]`}>
+                <Link href="/login" className={`${ui.btn} ${ui.primary} h-[52px] w-full px-7 text-base sm:w-auto shadow-[0_10px_30px_-10px_rgba(31,92,70,0.7)]`}>
                   Crear mi cuadrante gratis
                 </Link>
-                <Link href="/demo" className={`${ui.btn} ${ui.secondary} h-[52px] px-7 text-base`}>
+                <Link href="/demo" className={`${ui.btn} ${ui.secondary} h-[52px] w-full px-7 text-base sm:w-auto`}>
                   <PlayIcon /> Probar la demo guiada
                 </Link>
               </div>

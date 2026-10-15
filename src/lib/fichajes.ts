@@ -170,6 +170,8 @@ export function dayStatus(
   shift: Pick<ShiftDef, "start" | "end" | "hours"> | null,
   now: Date = new Date(),
   marginMinutes = 10,
+  /** Día desde el que el local ficha: antes, un día sin fichajes no se revisa. */
+  since?: string | null,
 ): DayStatus {
   const worked = records.reduce((a, r) => a + recordHours(r, now), 0);
   const planned = shift?.hours ?? 0;
@@ -180,6 +182,7 @@ export function dayStatus(
   if (records.some((r) => !r.end)) return { ...base, kind: "open" };
 
   if (!shift) return { ...base, kind: records.length ? "unplanned" : "none" };
+  if (!records.length && since && dateISO < since) return { ...base, kind: "none" };
 
   const win = plannedWindow(dateISO, shift);
   if (!records.length) return { ...base, kind: now.getTime() > win.start + margin ? "missing" : "pending" };

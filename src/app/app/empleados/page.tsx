@@ -29,7 +29,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ nuevo?: strin
 
 export default function EmpleadosPage({ searchParams }: { searchParams: Promise<{ nuevo?: string }> }) {
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
+    <main className="anim-page mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
       <Suspense fallback={<div className={`${ui.card} h-96 animate-pulse`} />}>
         <Content searchParams={searchParams} />
       </Suspense>

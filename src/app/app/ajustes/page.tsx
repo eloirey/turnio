@@ -13,7 +13,7 @@ async function Content() {
 
 export default function AjustesPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-8">
+    <main className="anim-page mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-8">
       <h1 className={`${ui.h1} mb-6`}>Ajustes</h1>
       <Suspense fallback={<div className={`${ui.card} h-96 animate-pulse`} />}>
         <Content />

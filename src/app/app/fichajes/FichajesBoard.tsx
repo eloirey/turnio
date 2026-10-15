@@ -39,6 +39,8 @@ interface Props {
   today: string;
   now: string;
   marginMinutes: number;
+  /** Desde qué día se ficha (antes no se marca «No fichó»). */
+  clockSince?: string | null;
   nav?: { prev: string; next: string; today: string; isCurrent: boolean };
   actions?: ClockActions;
   /** Tras guardar: la app recarga los datos del servidor; la demo ya los tiene. */
@@ -86,7 +88,7 @@ const CELL: Partial<Record<DayStatusKind, string>> = {
 };
 
 export function FichajesBoard(props: Props) {
-  const { people, roles, shifts, records, planned, changes, monday, today, marginMinutes, nav, actions = serverActions } = props;
+  const { people, roles, shifts, records, planned, changes, monday, today, marginMinutes, clockSince, nav, actions = serverActions } = props;
   const router = useRouter();
   const isDemo = useIsDemo();
   const onChanged = props.onChanged ?? (() => router.refresh());
@@ -103,7 +105,7 @@ export function FichajesBoard(props: Props) {
     const slot = planned.find((p) => p.employeeId === personId && p.date === date)?.slot;
     const shift = slot && shifts[slot] ? shifts[slot] : null;
     const future = date > today;
-    const st = future ? { kind: (shift ? "pending" : "none") as DayStatusKind, worked: 0, planned: shift?.hours ?? 0, lateMinutes: 0, earlyMinutes: 0 } : dayStatus(date, recs, shift, now, marginMinutes);
+    const st = future ? { kind: (shift ? "pending" : "none") as DayStatusKind, worked: 0, planned: shift?.hours ?? 0, lateMinutes: 0, earlyMinutes: 0 } : dayStatus(date, recs, shift, now, marginMinutes, clockSince);
     return { ...st, date, records: recs, shift, future };
   };
 
@@ -115,7 +117,7 @@ export function FichajesBoard(props: Props) {
   const includesToday = days.includes(today);
 
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
+    <main className="anim-page mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="mb-1.5 text-[13px] font-medium uppercase tracking-[0.08em] text-ink-muted">Registro de jornada</div>
@@ -307,17 +309,19 @@ function DayCell({ c, disabled, onOpen }: { c: Cell; disabled: boolean; onOpen: 
   const last = c.records[c.records.length - 1];
   const range = first ? `${madridTime(first.start)}–${last?.end ? madridTime(last.end) : last?.missingEnd ? "?" : "…"}` : "";
   const planned = c.shift ? `${c.shift.label} ${shiftTimes(c.shift)}` : "";
-  if (c.kind === "none") return <div className="flex h-[68px] items-center justify-center rounded-[10px] text-ink-muted/50">—</div>;
+  if (c.kind === "none" && !c.shift) return <div className="flex h-[68px] items-center justify-center rounded-[10px] text-ink-muted/50">—</div>;
+  // Futuro, pendiente o de antes de activar el fichaje: solo el turno previsto.
+  const dashed = c.future || c.kind === "pending" || c.kind === "none";
   return (
     <button
       onClick={onOpen}
       disabled={disabled}
       title={planned ? `Previsto: ${planned}` : "Sin turno previsto"}
       className={`flex h-[68px] w-full flex-col justify-center gap-0.5 rounded-[10px] border px-2.5 text-left transition enabled:hover:-translate-y-px enabled:hover:shadow-md ${
-        c.future || c.kind === "pending" ? "border-dashed border-line-strong text-ink-muted" : (CELL[c.kind] ?? "border-line bg-surface")
+        dashed ? "border-dashed border-line-strong text-ink-muted" : (CELL[c.kind] ?? "border-line bg-surface")
       }`}
     >
-      {c.future || c.kind === "pending" ? (
+      {dashed ? (
         <>
           <span className="truncate text-[13px] font-semibold">{c.shift?.label}</span>
           <span className="truncate text-xs tabular-nums">{c.shift ? shiftTimes(c.shift) : ""}</span>

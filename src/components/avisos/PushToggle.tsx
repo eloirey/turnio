@@ -92,7 +92,8 @@ export function PushToggle({ save, remove, device = "este móvil", compact = fal
 
   if (state === "loading" || state === "unavailable") return null;
 
-  const box = compact ? "text-[13px]" : "rounded-2xl border border-line bg-surface p-4 text-sm";
+  // Si los bloqueó, basta una línea discreta: no hace falta una tarjeta entera.
+  const box = compact || state === "denied" ? "px-1 text-[13px]" : "rounded-2xl border border-line bg-surface p-4 text-sm";
   return (
     <div className={box}>
       {state === "on" && (
@@ -119,8 +120,8 @@ export function PushToggle({ save, remove, device = "este móvil", compact = fal
         </div>
       )}
       {state === "denied" && (
-        <p className="text-ink-soft">
-          Has bloqueado los avisos de esta web. Para recibirlos, permítelos en los ajustes del navegador (el candado junto a la dirección) y vuelve aquí.
+        <p className="text-ink-muted">
+          🔕 Avisos bloqueados en este navegador. Si los quieres, permítelos en sus ajustes (el candado junto a la dirección).
         </p>
       )}
       {state === "ios-install" && (
