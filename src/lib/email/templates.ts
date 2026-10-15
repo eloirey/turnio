@@ -3,7 +3,6 @@
  *  - Los de la cuenta (confirmar, restablecer contraseña, cambiar email) los
  *    manda Supabase: se generan en supabase/templates/*.html y se pegan en
  *    Authentication → Emails → Templates (ver README).
- *  - El de bienvenida lo manda la app al crear el negocio (lib/email/send.ts).
  *
  * HTML de correo «a la antigua» (tablas y estilos en línea) para que se vea
  * igual en Gmail, Outlook y Apple Mail. Sin fuentes externas: el logo es una
@@ -21,8 +20,6 @@ const C = {
   soft: "#4A4843",
   muted: "#6B6860",
   accent: "#1F5C46",
-  accentSoft: "#EEF3EF",
-  accentInk: "#123B2C",
 };
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
@@ -38,8 +35,6 @@ export interface EmailParts {
   /** Párrafos (HTML ya escapado). */
   body: string[];
   button: { label: string; url: string };
-  /** Bloque opcional entre el texto y el botón (HTML ya escapado). */
-  beforeButton?: string;
   /** Letra pequeña: caducidad, «si no has sido tú…». */
   note?: string;
   /** Mostrar el enlace en texto por si el botón no funciona. */
@@ -85,7 +80,7 @@ export function layout(e: EmailParts): string {
         <tr>
           <td class="card" style="background:${C.card};border:1px solid ${C.line};border-radius:16px;padding:40px 40px 36px;">
             <h1 class="h1" style="margin:0 0 16px;font-family:${FONT};font-size:28px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:${C.ink};">${e.title}</h1>
-            ${e.body.map((b, i) => p(b, i === e.body.length - 1)).join("\n            ")}${e.beforeButton ? `\n            ${e.beforeButton}` : ""}
+            ${e.body.map((b, i) => p(b, i === e.body.length - 1)).join("\n            ")}
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn" style="margin:28px 0 0;">
               <tr>
                 <td align="center" style="border-radius:10px;background:${C.accent};">
@@ -164,54 +159,3 @@ export const SUPABASE_TEMPLATES = {
     }),
   },
 } as const;
-
-// ---------- Bienvenida (la manda la app al crear el negocio) ----------
-
-export function welcomeEmail(input: { localName: string; appUrl: string }): { subject: string; html: string; text: string } {
-  const local = esc(input.localName.trim());
-  const app = input.appUrl.replace(/\/$/, "");
-  const steps: [string, string][] = [
-    ["Añade a tu equipo", "Nombre, puesto, horas de contrato y cuándo puede trabajar cada persona. Solo la primera vez."],
-    ["Revisa cuánta gente necesitas", "Ya viene la plantilla de tu sector: cámbiala en Necesidades si tu día a día es distinto."],
-    ["Genera y publica", "Un botón hace la semana. La retocas, publicas y cada persona recibe su horario por WhatsApp o Telegram."],
-  ];
-  const stepsHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 4px;background:${C.accentSoft};border-radius:12px;">
-              ${steps
-                .map(
-                  ([t, d], i) => `<tr>
-                <td valign="top" style="padding:${i ? 4 : 20}px 0 ${i === steps.length - 1 ? 20 : 12}px 20px;width:28px;">
-                  <div style="width:26px;height:26px;border-radius:13px;background:${C.accent};color:#FFFFFF;font-family:${FONT};font-size:13px;font-weight:700;line-height:26px;text-align:center;">${i + 1}</div>
-                </td>
-                <td valign="top" style="padding:${i ? 4 : 20}px 20px ${i === steps.length - 1 ? 20 : 12}px 12px;font-family:${FONT};font-size:14px;line-height:1.55;color:${C.soft};">
-                  <strong style="display:block;font-size:15px;color:${C.accentInk};">${t}</strong>${d}
-                </td>
-              </tr>`,
-                )
-                .join("\n              ")}
-            </table>`;
-  const html = layout({
-    preheader: `«${local}» está listo. Tres pasos y tienes el primer cuadrante.`,
-    title: `«${local}» ya está en Rotafy`,
-    body: [
-      "Gracias por probar Rotafy. Hemos preparado tu negocio con las franjas, puestos y necesidades típicas de tu sector, así que el primer cuadrante está a tres pasos:",
-    ],
-    button: { label: "Ir a mi cuadrante", url: `${app}/app/cuadrante` },
-    beforeButton: stepsHtml,
-    note: "¿Te atascas en algo? Responde a este correo y te ayudamos. En cada pantalla de la app también tienes el botón «Ayuda».",
-    reason: "Recibes este correo porque acabas de crear tu negocio en Rotafy.",
-  });
-  return {
-    subject: `«${input.localName.trim()}» ya está en Rotafy`,
-    html,
-    text: [
-      `«${input.localName.trim()}» ya está en Rotafy`,
-      "",
-      "Gracias por probar Rotafy. El primer cuadrante está a tres pasos:",
-      ...steps.map(([t, d], i) => `${i + 1}. ${t}: ${d}`),
-      "",
-      `Ir a mi cuadrante: ${app}/app/cuadrante`,
-      "",
-      `¿Te atascas? Responde a este correo o escribe a ${CONTACT}.`,
-    ].join("\n"),
-  };
-}

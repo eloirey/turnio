@@ -66,7 +66,7 @@ export default function PrivacidadPage() {
           <strong>Supabase</strong> (base de datos y autenticación), con los datos alojados en la Unión Europea.
         </li>
         <li>
-          <strong>Resend</strong> (envío de los correos de la cuenta: confirmar el email, restablecer la contraseña y la bienvenida), desde su región de la
+          <strong>Resend</strong> (envío de los correos de la cuenta: confirmar el email y restablecer la contraseña), desde su región de la
           Unión Europea.
         </li>
         <li>
