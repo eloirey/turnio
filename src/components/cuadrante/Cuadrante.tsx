@@ -11,6 +11,7 @@ import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import { emptyGrid, findGaps, findIssues, generateSchedule, hoursByEmployee } from "@/lib/schedule";
 import { activeSlots, FREE, type AbsenceMap, type Code, type Demand, type Employee, type Grid, type IssueKind, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
 import { emitCuadranteEvent } from "@/components/guide/GuidePanel";
+import { ExportDialog } from "./ExportDialog";
 import { NotifyDialog, type NotifyEmployee } from "./NotifyDialog";
 
 export type WeekStatus = "borrador" | "publicado" | "cambios";
@@ -95,6 +96,7 @@ export function Cuadrante(props: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [publishedNow, setPublishedNow] = useState(false);
   const toast = useToast(6000);
+  const [exportOpen, setExportOpen] = useState(false);
   const { confirm, view: confirmView } = useConfirm();
 
   // Cola de guardado: los guardados se hacen en orden y solo cuenta el último.
@@ -402,6 +404,15 @@ export function Cuadrante(props: Props) {
                   >
                     Imprimir para el tablón
                   </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setExportOpen(true);
+                    }}
+                    hint="Excel o CSV, en varios formatos"
+                  >
+                    Exportar a Excel…
+                  </MenuItem>
                 </div>
               </>
             )}
@@ -642,6 +653,13 @@ export function Cuadrante(props: Props) {
           localName={notify.localName}
           gaps={totalGaps}
           onClose={() => setNotifyOpen(false)}
+        />
+      )}
+      {exportOpen && (
+        <ExportDialog
+          input={{ localName: notify?.localName ?? "Cuadrante", monday, employees, roles, shifts, grid, absences, demand }}
+          onClose={() => setExportOpen(false)}
+          onError={(m) => toast.show({ message: m, tone: "error" })}
         />
       )}
       {toast.view}

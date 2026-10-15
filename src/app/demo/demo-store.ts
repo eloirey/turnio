@@ -10,7 +10,7 @@ import type { Role } from "@/lib/roles";
 import { DEFAULT_RULES } from "@/lib/schedule/defaults";
 import { emptyGrid } from "@/lib/schedule/generator";
 import { spanHours, toHours } from "@/lib/schedule/rules";
-import { getTemplate, templateDemand, templateRoles, templateShifts, templateTeam } from "@/lib/schedule/templates";
+import { customShifts, getTemplate, templateDemand, templateRoles, templateShifts, templateTeam, type ShiftEdit } from "@/lib/schedule/templates";
 import { activeSlots, FREE, type Demand, type Grid, type Rules, type ShiftCatalog } from "@/lib/schedule/types";
 
 export type DemoTab = "cuadrante" | "fichajes" | "empleados" | "necesidades" | "ajustes";
@@ -50,13 +50,13 @@ function rand(key: string): number {
 const hex32 = (key: string) =>
   Array.from({ length: 4 }, (_, i) => Math.floor(rand(`${key}:${i}`) * 0xffffffff).toString(16).padStart(8, "0")).join("");
 
-export function createDemoState(input: { nombre: string; tipo: string; puestos: string[] }, realToday = todayInMadrid()): DemoState {
+export function createDemoState(input: { nombre: string; tipo: string; puestos: string[]; franjas?: ShiftEdit[] }, realToday = todayInMadrid()): DemoState {
   const t = getTemplate(input.tipo);
   const roles = templateRoles(t, input.puestos);
-  const shifts = templateShifts(t);
+  const shifts = input.franjas ? customShifts(t, input.franjas) : templateShifts(t);
   const monday = mondayOf(realToday);
   const today = addDays(monday, 3);
-  const team = templateTeam(t, roles);
+  const team = templateTeam(t, roles, shifts);
   const employees: EmployeeRecord[] = team.map((e, i) => ({ ...e, token: hex32(`${e.name}-${i}`), phone: e.phone }));
   const last = employees[employees.length - 1];
   return {
@@ -64,7 +64,7 @@ export function createDemoState(input: { nombre: string; tipo: string; puestos: 
     tipo: input.tipo,
     roles,
     shifts,
-    demand: templateDemand(t, roles),
+    demand: templateDemand(t, roles, shifts),
     rules: { ...DEFAULT_RULES },
     settings: { clockIn: true, clockMarginMinutes: 10 },
     employees,

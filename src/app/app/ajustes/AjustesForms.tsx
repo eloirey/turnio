@@ -154,6 +154,9 @@ function SettingsCards(props: {
               Cada persona ficha la entrada y la salida desde su enlace, sin instalar nada. Tú ves las horas, las incidencias y puedes corregir olvidos.
               Registrar la jornada es obligatorio en España desde 2019.
             </p>
+            <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-ink-muted">
+              Conservar el registro 4 años es responsabilidad de tu empresa, no de Rotafy: descarga el Excel cada mes desde Fichajes y guarda tu copia.
+            </p>
           </div>
           <button
             type="button"

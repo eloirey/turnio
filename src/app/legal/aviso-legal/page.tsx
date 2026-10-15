@@ -29,13 +29,20 @@ export default function AvisoLegalPage() {
 
       <h2>Objeto</h2>
       <p>
-        Rotafy es un servicio en línea para crear y publicar cuadrantes de turnos de trabajo. El uso del sitio implica la aceptación de este aviso legal.
+        Rotafy es un servicio en línea para crear y publicar cuadrantes de turnos de trabajo y llevar el registro de jornada. El uso del sitio implica la aceptación de este aviso legal.
       </p>
 
       <h2>Responsabilidad</h2>
       <p>
         Rotafy ayuda a detectar incumplimientos de las reglas configuradas (descansos, días libres, horas de contrato), pero no sustituye el asesoramiento laboral.
         La empresa usuaria es la única responsable de los cuadrantes que publica y de su adecuación a la normativa y al convenio aplicables.
+      </p>
+      <p>
+        <strong>Registro de jornada.</strong> Rotafy es una herramienta para registrar la jornada, no un servicio de archivo ni de custodia. La obligación de
+        conservar el registro durante cuatro años y de ponerlo a disposición de las personas trabajadoras, sus representantes y la Inspección de Trabajo
+        (art. 34.9 del Estatuto de los Trabajadores) corresponde exclusivamente a la empresa usuaria. Rotafy mantiene los fichajes mientras la cuenta esté
+        activa, pero no garantiza su conservación durante ese plazo ni responde de su pérdida por el borrado de la cuenta, un fallo técnico o el fin del
+        servicio. La empresa debe descargar periódicamente su registro (Fichajes → Exportar a Excel) y guardar su propia copia.
       </p>
 
       <h2>Propiedad intelectual</h2>

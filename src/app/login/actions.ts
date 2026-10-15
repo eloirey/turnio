@@ -39,7 +39,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: translate(error.message), email };
-  redirect("/app");
+  redirect(await homePath(supabase));
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -103,11 +103,17 @@ export async function updatePassword(_prev: AuthState, formData: FormData): Prom
     if (m.includes("different")) return { error: "La contraseña nueva tiene que ser distinta de la anterior." };
     return { error: translate(error.message) };
   }
-  redirect("/app/cuadrante");
+  redirect(await homePath(supabase));
 }
 
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+/** Tras entrar: al cuadrante si ya tiene negocio y, si no, a crearlo. */
+async function homePath(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
+  const { data } = await supabase.from("locales").select("id").limit(1);
+  return data?.length ? "/app/cuadrante" : "/bienvenida";
 }
