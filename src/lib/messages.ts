@@ -21,7 +21,7 @@ export interface ScheduleMessageOptions {
 }
 
 /** Al final de cada mensaje: si llega otro de la misma semana, es que hay cambios. */
-export const RESEND_NOTE = "Si te llega otro mensaje de esta misma semana, es que ha cambiado algo: revísalo.";
+const RESEND_NOTE = "Si te llega otro mensaje de esta misma semana, es que ha cambiado algo: revísalo.";
 
 /** Mensaje personal al publicar, con el enlace escrito dentro (WhatsApp, copiar). */
 export function personalScheduleMessage(opts: ScheduleMessageOptions): string {

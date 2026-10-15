@@ -28,7 +28,7 @@ export interface ClockRecord {
 
 export type ClockPlace = "local" | "fuera" | "sin_datos" | "teletrabajo";
 
-export const PLACE_LABEL: Record<ClockPlace, string> = {
+const PLACE_LABEL: Record<ClockPlace, string> = {
   local: "En el local",
   fuera: "Fuera del local",
   sin_datos: "Sin ubicación",
@@ -222,10 +222,6 @@ export function groupByEmployeeDay(records: ClockRecord[]): Map<string, ClockRec
   return map;
 }
 
-/**
- * Registro de jornada en CSV (se abre en Excel). Separador ";" y coma decimal,
- * que es lo que espera Excel en España. Incluye un BOM para que respete las tildes.
- */
 /** Un día de una persona en el registro (lo que se exporta). */
 export interface ClockDayRow {
   date: string;
@@ -238,35 +234,4 @@ export interface ClockDayRow {
   plannedHours?: number;
   status: DayStatusKind;
   lastReason?: string;
-}
-
-export function clockCsv(rows: ClockDayRow[], now: Date = new Date()): string {
-  const esc = (v: string) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const header = ["Fecha", "Persona", "Puesto", "Entrada", "Salida", "Horas", "Turno previsto", "Estado", "Corregido", "Motivo de la corrección"];
-  const lines = [header.join(";")];
-  for (const row of rows) {
-    const [y, m, d] = row.date.split("-");
-    const date = `${d}/${m}/${y}`;
-    const tramos = row.records.length ? row.records : [null];
-    for (const r of tramos) {
-      const hours = r ? recordHours(r, now) : 0;
-      lines.push(
-        [
-          date,
-          row.name,
-          row.role,
-          r ? madridTime(r.start) : "",
-          r?.end ? madridTime(r.end) : r?.missingEnd ? "Sin fichar" : r ? "En curso" : "",
-          r ? hoursClock(hours) : "",
-          row.planned,
-          STATUS_LABEL[row.status] ?? "",
-          r?.edited ? "Sí" : "No",
-          r?.edited ? (row.lastReason ?? "") : "",
-        ]
-          .map((v) => esc(String(v)))
-          .join(";"),
-      );
-    }
-  }
-  return "﻿" + lines.join("\r\n") + "\r\n";
 }

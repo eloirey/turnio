@@ -13,7 +13,7 @@ export const timeField = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora no 
 const count = z.number().int().min(0).max(50);
 const byRole = z.record(z.string().regex(/^[a-z0-9-]{1,40}$/), count);
 
-export const shiftInput = z.object({
+const shiftInput = z.object({
   code: z.string().regex(/^[A-Za-z0-9]{1,8}$/, "Código de franja no válido").refine((c) => c !== "L", "Código reservado"),
   label: z.string().trim().min(1, "Ponle nombre a cada franja").max(30, "El nombre de una franja puede tener 30 letras como mucho"),
   start: timeField,

@@ -14,7 +14,7 @@ export interface ScreenHelp {
   topics: HelpTopic[];
 }
 
-export const HELP: Record<string, ScreenHelp> = {
+const HELP: Record<string, ScreenHelp> = {
   "/app/cuadrante": {
     title: "Cuadrante",
     intro: "Aquí haces el horario de la semana: lo generas, lo retocas y lo publicas para que tu equipo lo vea.",

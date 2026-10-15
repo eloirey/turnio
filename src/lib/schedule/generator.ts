@@ -25,7 +25,7 @@ export function emptyGrid(employees: Employee[]): Grid {
 }
 
 /** Convierte la demanda en una lista plana de "plazas" a cubrir (una por persona). */
-export function expandDemand(demand: Demand, shifts?: ShiftCatalog): Need[] {
+function expandDemand(demand: Demand, shifts?: ShiftCatalog): Need[] {
   const needs: Need[] = [];
   demand.forEach((dayDemand, day) => {
     for (const slot of Object.keys(dayDemand)) {

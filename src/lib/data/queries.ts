@@ -28,7 +28,6 @@ import {
   type TurnoRow,
 } from "./mappers";
 
-export { toClockRecords, type FichajeRow };
 
 /**
  * Lecturas del encargado. Todas usan el cliente con su sesión, así que la
@@ -41,7 +40,7 @@ export { toClockRecords, type FichajeRow };
  */
 
 /** Usuario de la sesión (verifica el token; con claves asimétricas, sin ir a la red). */
-export const getUserId = cache(async (): Promise<string | null> => {
+const getUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   return (data?.claims?.sub as string | undefined) ?? null;
