@@ -62,7 +62,6 @@ Los correos de la cuenta (confirmar email, restablecer contraseña) los manda Su
    | Change email address | `cambiar-email.html` | Confirma tu nuevo email en Rotafy |
 
    Se generan desde `src/lib/email/templates.ts`; si cambias el diseño, `npx vitest run -u` las regenera.
-4. Para el correo de **bienvenida** (lo manda la app al crear el negocio), crea otra API key igual y ponla como `RESEND_API_KEY` en `.env.local` y en Netlify. Sin ella, simplemente no se manda.
 
 El logo de los correos se carga de `https://rotafy.es/email/logo.png`: hasta que la web esté publicada, en su lugar se verá el texto «rotafy».
 
@@ -129,7 +128,7 @@ src/
     nav.tsx                  Enlaces que en la demo cambian de pestaña en vez de navegar
   lib/
     push.ts  clock-place.ts  Avisos en el móvil y comprobación del lugar al fichar
-    email/                   Diseño de los correos (plantillas de Supabase + bienvenida) y envío con Resend
+    email/                   Diseño de los correos de la cuenta (genera las plantillas de Supabase)
     schedule/                Lógica pura: generador, reglas, validador (+ tests)
     data/
       mappers.ts             Filas de la BD ⇄ tipos del dominio (+ tests)
