@@ -15,7 +15,7 @@ const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 const SUBJECT = process.env.VAPID_SUBJECT || "mailto:hola@rotafy.es";
 
-export const pushConfigured = () => Boolean(PUBLIC_KEY && PRIVATE_KEY);
+const pushConfigured = () => Boolean(PUBLIC_KEY && PRIVATE_KEY);
 
 let configured = false;
 function setup() {
@@ -44,7 +44,7 @@ interface Sub {
 }
 
 /** Lo que verá la persona en la notificación. */
-export function pushPayload(a: Pick<AvisoPush, "titulo" | "cuerpo" | "tipo" | "id">, url: string): string {
+function pushPayload(a: Pick<AvisoPush, "titulo" | "cuerpo" | "tipo" | "id">, url: string): string {
   return JSON.stringify({ title: a.titulo, body: a.cuerpo ?? "", url, tag: `${a.tipo}-${a.id}` });
 }
 
@@ -97,7 +97,7 @@ export async function deliverPush(): Promise<number> {
 }
 
 /** La suscripción que da el navegador (validada antes de guardarla). */
-export const pushSubscriptionSchema = z.object({
+const pushSubscriptionSchema = z.object({
   endpoint: z.url().startsWith("https://").max(1000),
   keys: z.object({ p256dh: z.string().min(10).max(200), auth: z.string().min(4).max(100) }),
 });

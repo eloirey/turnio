@@ -14,7 +14,7 @@ export interface ScreenHelp {
   topics: HelpTopic[];
 }
 
-export const HELP: Record<string, ScreenHelp> = {
+const HELP: Record<string, ScreenHelp> = {
   "/app/cuadrante": {
     title: "Cuadrante",
     intro: "Aquí haces el horario de la semana: lo generas, lo retocas y lo publicas para que tu equipo lo vea.",
@@ -92,6 +92,10 @@ export const HELP: Record<string, ScreenHelp> = {
       {
         q: "¿Mis empleados pueden ver lo que han fichado?",
         a: "Sí, tienen derecho. En su enlace, «Mi registro de jornada» les enseña cada día del mes y pueden descargarlo en Excel o CSV.",
+      },
+      {
+        q: "Lo he activado a mitad de semana: ¿los días anteriores cuentan como «No fichó»?",
+        a: "No. Rotafy solo revisa desde el día en que activaste el fichaje. Los días de antes salen con el turno previsto, sin marcar nada.",
       },
       {
         q: "¿Puedo desactivar el fichaje?",

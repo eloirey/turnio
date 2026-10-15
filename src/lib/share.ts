@@ -2,7 +2,7 @@
  * Canales para mandar el horario o el enlace a cada persona. Ninguno usa API:
  * se abre la app con el mensaje ya escrito y el encargado solo pulsa enviar.
  */
-import { normalizePhone, whatsappLink } from "./whatsapp";
+import { whatsappLink } from "./whatsapp";
 
 export type Channel = "whatsapp" | "telegram" | "copy";
 
@@ -36,8 +36,6 @@ export function shareHref(channel: Channel, m: ShareMessage): string | null {
   if (channel === "telegram") return m.link && m.noLink ? telegramLink(m.noLink, m.link) : telegramLink(m.full);
   return null;
 }
-
-export const hasPhone = (phone?: string | null) => Boolean(normalizePhone(phone));
 
 const KEY = "rotafy:canal";
 

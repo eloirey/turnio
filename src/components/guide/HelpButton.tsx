@@ -47,8 +47,8 @@ export function HelpButton() {
       {open &&
         createPortal(
         <div className="fixed inset-0 z-50 print:hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
-          <div className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col overflow-hidden rounded-t-3xl bg-surface shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[440px] sm:rounded-none sm:rounded-l-3xl">
+          <div className="anim-overlay absolute inset-0 bg-ink/30 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
+          <div className="anim-drawer absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col overflow-hidden rounded-t-3xl bg-surface shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[440px] sm:rounded-none sm:rounded-l-3xl">
             <div className="flex items-start justify-between gap-3 border-b border-line px-6 pb-4 pt-5">
               <div>
                 <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-muted">Ayuda</div>

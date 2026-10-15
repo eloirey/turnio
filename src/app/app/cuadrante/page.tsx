@@ -57,7 +57,7 @@ async function Content({ searchParams }: { searchParams: Search }) {
       onboarding={{ anyPublished: week.anyPublished, previousWeekHasShifts: week.previousWeekHasShifts }}
       clock={
         settings.clockIn
-          ? { records: week.clock, now: new Date().toISOString(), marginMinutes: settings.clockMarginMinutes, today: todayInMadrid() }
+          ? { records: week.clock, now: new Date().toISOString(), marginMinutes: settings.clockMarginMinutes, today: todayInMadrid(), since: settings.clockSince }
           : undefined
       }
     />

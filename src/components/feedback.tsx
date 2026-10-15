@@ -31,7 +31,7 @@ export function useToast(duration = 5000) {
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4 print:hidden">
       <div
         role="status"
-        className={`pointer-events-auto flex max-w-xl items-center gap-4 rounded-xl px-4 py-3 text-[15px] shadow-lg ${toast.tone === "error" ? "bg-danger text-white" : "bg-ink text-white"}`}
+        className={`anim-toast pointer-events-auto flex max-w-xl items-center gap-4 rounded-xl px-4 py-3 text-[15px] shadow-lg ${toast.tone === "error" ? "bg-danger text-white" : "bg-ink text-white"}`}
       >
         <span>{toast.message}</span>
         {toast.action && (
@@ -87,13 +87,13 @@ export function useConfirm() {
   }, [state, close]);
 
   const view = state ? (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-6" onClick={() => close(false)}>
+    <div className="anim-overlay fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-6" onClick={() => close(false)}>
       <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl bg-surface p-6 shadow-xl sm:rounded-2xl"
+        className="anim-sheet w-full max-w-md rounded-t-2xl bg-surface p-6 shadow-xl sm:rounded-2xl"
       >
         <h2 id="confirm-title" className={ui.h2}>
           {state.title}

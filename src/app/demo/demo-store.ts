@@ -79,7 +79,7 @@ export function createDemoState(input: { nombre: string; tipo: string; puestos: 
     shifts,
     demand: templateDemand(t, roles, shifts),
     rules: { ...DEFAULT_RULES },
-    settings: { clockIn: true, clockMarginMinutes: 10, clockControl: "no", clockHasPlace: false, clockRadius: 200, clockIps: [] },
+    settings: { clockIn: true, clockMarginMinutes: 10, clockSince: null, clockControl: "no", clockHasPlace: false, clockRadius: 200, clockIps: [] },
     employees,
     // Alguien tiene vacaciones el fin de semana: el generador lo respeta.
     absences: last ? [{ id: "aus-1", empleado_id: last.id, desde: addDays(monday, 5), hasta: addDays(monday, 9), motivo: "vacaciones", nota: "Viaje" }] : [],

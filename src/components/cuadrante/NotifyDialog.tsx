@@ -70,13 +70,13 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" onClick={onClose}>
+    <div className="anim-overlay fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="notify-title"
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-xl flex-col rounded-t-2xl bg-surface sm:rounded-2xl"
+        className="anim-sheet flex max-h-[90vh] w-full max-w-xl flex-col rounded-t-2xl bg-surface sm:rounded-2xl"
       >
         <div className="flex items-start justify-between gap-3 border-b border-line p-5">
           <div>

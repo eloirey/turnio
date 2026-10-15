@@ -29,6 +29,8 @@ export interface LocalRow {
   min_dias_libres: number;
   horas_extra_max?: number;
   fichaje_activo?: boolean;
+  /** Día en que se activó el fichaje (antes no se revisa). */
+  fichaje_desde?: string | null;
   fichaje_margen_minutos?: number;
   fichaje_control?: ClockControl;
   fichaje_lat?: number | null;
@@ -111,6 +113,8 @@ export interface LocalSettings {
   clockIn: boolean;
   /** Minutos de margen antes de marcar un retraso o una salida temprana. */
   clockMarginMinutes: number;
+  /** Desde qué día se ficha (YYYY-MM-DD) o null. */
+  clockSince: string | null;
   /** Comprobar si se ficha en el local: no, avisar o no dejar. */
   clockControl: ClockControl;
   /** ¿Hay ubicación del local guardada? (las coordenadas no salen del servidor) */
@@ -261,6 +265,7 @@ export function localToSettings(local: LocalRow): LocalSettings {
   return {
     clockIn: Boolean(local.fichaje_activo),
     clockMarginMinutes: local.fichaje_margen_minutos ?? 10,
+    clockSince: local.fichaje_desde ?? null,
     clockControl: local.fichaje_control ?? "no",
     clockHasPlace: local.fichaje_lat != null && local.fichaje_lng != null,
     clockRadius: local.fichaje_radio_m ?? 200,

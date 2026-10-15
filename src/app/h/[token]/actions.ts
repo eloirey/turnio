@@ -196,23 +196,36 @@ export async function loadMyClock(token: string, month: string): Promise<MyClock
   const first = `${month}-01`;
   const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
   const db = createAdminClient();
-  const [{ data, error }, { data: local }] = await Promise.all([
+  const from = madridToIso(addDays(first, -1), "00:00");
+  const [{ data, error }, { data: local }, { data: changes }] = await Promise.all([
     db
       .from("fichajes")
       .select("id, empleado_id, entrada, salida, sin_salida, editado, ubicacion_entrada, ubicacion_salida, distancia_entrada_m, distancia_salida_m")
       .eq("empleado_id", me.id)
-      .gte("entrada", madridToIso(addDays(first, -1), "00:00"))
+      .gte("entrada", from)
       .lte("entrada", madridToIso(addDays(last, 1), "23:59"))
       .order("entrada"),
     db.from("locales").select("nombre").eq("id", me.local_id).single(),
+    // Motivo de las correcciones del encargado (tiene derecho a saberlo).
+    db.from("fichajes_cambios").select("fichaje_id, motivo").eq("empleado_id", me.id).gte("created_at", from).order("created_at"),
   ]);
   if (error) return { ok: false, error: "No se ha podido cargar tu registro." };
   const byDay = groupByEmployeeDay(toClockRecords((data ?? []) as FichajeRow[]));
+  const reasonOf = new Map(((changes ?? []) as { fichaje_id: string; motivo: string }[]).map((c) => [c.fichaje_id, c.motivo]));
   const rows: ClockDayRow[] = [];
   for (const [key, records] of byDay) {
     const date = key.split("|")[1];
     if (!date.startsWith(month)) continue;
-    rows.push({ date, name: me.nombre, role: "", records, planned: "", status: records.some((r) => r.missingEnd) ? "forgot" : "none" });
+    const edited = [...records].reverse().find((r) => r.edited && reasonOf.has(r.id));
+    rows.push({
+      date,
+      name: me.nombre,
+      role: "",
+      records,
+      planned: "",
+      status: records.some((r) => r.missingEnd) ? "forgot" : "none",
+      lastReason: edited ? reasonOf.get(edited.id) : undefined,
+    });
   }
   rows.sort((a, b) => a.date.localeCompare(b.date));
   return { ok: true, month, rows, now: new Date().toISOString(), localName: (local?.nombre as string) ?? "", name: me.nombre };

@@ -269,48 +269,72 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
               return (
                 <li
                   key={row.code}
-                  className="grid grid-cols-[1fr_auto] gap-2 rounded-xl border border-line p-3 md:grid-cols-[64px_minmax(140px,1fr)_140px_140px_70px_96px_44px] md:items-center md:border-0 md:p-1"
+                  className="flex flex-col gap-3 rounded-xl border border-line p-3 md:grid md:grid-cols-[64px_minmax(140px,1fr)_140px_140px_70px_96px_44px] md:items-center md:gap-2 md:border-0 md:p-1"
                 >
-                  <div className="order-last flex gap-1 md:order-none">
+                  {/* En el móvil, por filas: nombre · horario · horas y cierre. En el ordenador, una sola fila. */}
+                  <div className="flex items-center gap-2 md:contents">
+                    <div className="hidden gap-1 md:flex">
                     <button type="button" onClick={() => moveRow(i, -1)} disabled={i === 0} aria-label={`Subir ${row.label}`} className="h-9 w-9 rounded-lg border border-line text-ink-muted disabled:opacity-30">
                       ↑
                     </button>
                     <button type="button" onClick={() => moveRow(i, 1)} disabled={i === rows.length - 1} aria-label={`Bajar ${row.label}`} className="h-9 w-9 rounded-lg border border-line text-ink-muted disabled:opacity-30">
                       ↓
                     </button>
-                  </div>
-                  <input
-                    aria-label="Nombre de la franja"
-                    value={row.label}
-                    maxLength={30}
-                    placeholder="Nombre (p. ej. Línea 12)"
-                    onChange={(e) => updateRow(i, { label: e.target.value })}
-                    className={`${ui.input} col-span-2 md:col-span-1 ${row.label.trim() ? "" : "border-pending-ink/50"}`}
-                  />
-                  <label className="flex items-center gap-2 text-xs text-ink-muted md:block">
-                    <span className="w-14 md:hidden">Entrada</span>
-                    <input type="time" aria-label={`Entrada de ${row.label}`} value={row.start} onChange={(e) => updateRow(i, { start: e.target.value })} className={`${ui.input} w-full`} />
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-ink-muted md:block">
-                    <span className="w-14 md:hidden">Salida</span>
-                    <input type="time" aria-label={`Salida de ${row.label}`} value={row.end} onChange={(e) => updateRow(i, { end: e.target.value })} className={`${ui.input} w-full`} />
-                  </label>
-                  <span className={`text-sm font-semibold tabular-nums md:text-right ${bad ? "text-danger-ink" : ""}`}>{fmtHours(h)}</span>
-                  <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm md:justify-center">
-                    <input type="checkbox" checked={row.closing} onChange={(e) => updateRow(i, { closing: e.target.checked })} className="h-5 w-5 accent-[#1F5C46]" />
-                    <span className="md:sr-only">Es un cierre</span>
-                  </label>
-                  <button
+                    </div>
+                    <input
+                      aria-label="Nombre de la franja"
+                      value={row.label}
+                      maxLength={30}
+                      placeholder="Nombre (p. ej. Línea 12)"
+                      onChange={(e) => updateRow(i, { label: e.target.value })}
+                      className={`${ui.input} min-w-0 flex-1 ${row.label.trim() ? "" : "border-pending-ink/50"}`}
+                    />
+                    <button
                     type="button"
                     onClick={() => removeRow(i)}
                     disabled={rows.length <= 1}
                     aria-label={`Quitar ${row.label}`}
-                    className="h-10 w-10 justify-self-end rounded-lg text-lg text-ink-muted hover:bg-danger-soft hover:text-danger-ink disabled:opacity-30"
+                    className="h-10 w-10 flex-none justify-self-end rounded-lg text-lg text-ink-muted hover:bg-danger-soft hover:text-danger-ink disabled:opacity-30 md:hidden"
                   >
                     ✕
                   </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 md:contents">
+                    <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-ink-muted md:block">
+                      <span className="md:hidden">Entrada</span>
+                      <input type="time" aria-label={`Entrada de ${row.label}`} value={row.start} onChange={(e) => updateRow(i, { start: e.target.value })} className={`${ui.input} w-full min-w-0`} />
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-ink-muted md:block">
+                      <span className="md:hidden">Salida</span>
+                      <input type="time" aria-label={`Salida de ${row.label}`} value={row.end} onChange={(e) => updateRow(i, { end: e.target.value })} className={`${ui.input} w-full min-w-0`} />
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-4 md:contents">
+                    <span className={`text-sm font-semibold tabular-nums md:text-right ${bad ? "text-danger-ink" : ""}`}>{fmtHours(h)}</span>
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm md:justify-center">
+                      <input type="checkbox" checked={row.closing} onChange={(e) => updateRow(i, { closing: e.target.checked })} className="h-5 w-5 accent-[#1F5C46]" />
+                      <span className="md:sr-only">Es un cierre</span>
+                    </label>
+                    <button
+                    type="button"
+                    onClick={() => removeRow(i)}
+                    disabled={rows.length <= 1}
+                    aria-label={`Quitar ${row.label}`}
+                    className="h-10 w-10 flex-none justify-self-end rounded-lg text-lg text-ink-muted hover:bg-danger-soft hover:text-danger-ink disabled:opacity-30 hidden md:block"
+                  >
+                    ✕
+                  </button>
+                    <div className="ml-auto flex gap-1 md:hidden">
+                    <button type="button" onClick={() => moveRow(i, -1)} disabled={i === 0} aria-label={`Subir ${row.label}`} className="h-9 w-9 rounded-lg border border-line text-ink-muted disabled:opacity-30">
+                      ↑
+                    </button>
+                    <button type="button" onClick={() => moveRow(i, 1)} disabled={i === rows.length - 1} aria-label={`Bajar ${row.label}`} className="h-9 w-9 rounded-lg border border-line text-ink-muted disabled:opacity-30">
+                      ↓
+                    </button>
+                    </div>
+                  </div>
                   {/* Turno partido: un segundo tramo el mismo día (p. ej. 12–16 y 20–24). */}
-                  <div className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-2 md:col-span-7 md:pl-[72px]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-2 md:col-span-7 md:border-0 md:pl-[72px] md:pt-0">
                     <label className="flex min-h-9 cursor-pointer items-center gap-2 text-sm text-ink-soft">
                       <input
                         type="checkbox"
@@ -325,9 +349,9 @@ export function NecesidadesEditor({ initialDemand, initialShifts, roles, onSave 
                     {split && (
                       <span className="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
                         y vuelve de
-                        <input type="time" aria-label={`Vuelta de ${row.label}`} value={row.start2} onChange={(e) => updateRow(i, { start2: e.target.value })} className={`${ui.input} w-[130px]`} />
+                        <input type="time" aria-label={`Vuelta de ${row.label}`} value={row.start2} onChange={(e) => updateRow(i, { start2: e.target.value })} className={`${ui.input} w-[120px]`} />
                         a
-                        <input type="time" aria-label={`Salida final de ${row.label}`} value={row.end2} onChange={(e) => updateRow(i, { end2: e.target.value })} className={`${ui.input} w-[130px]`} />
+                        <input type="time" aria-label={`Salida final de ${row.label}`} value={row.end2} onChange={(e) => updateRow(i, { end2: e.target.value })} className={`${ui.input} w-[120px]`} />
                       </span>
                     )}
                   </div>

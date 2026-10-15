@@ -68,18 +68,18 @@ export function OnboardingForm({ onCreate, defaultName = "" }: Props) {
           <p className="mb-5 text-sm text-ink-soft">
             Te preparamos los puestos, las franjas y cuánta gente suele hacer falta. Es solo un punto de partida: todo se cambia a tu gusto.
           </p>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-3">
             {SECTOR_TEMPLATES.filter((t) => t.key !== "otro").map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => pick(t.key)}
                 aria-pressed={tipo === t.key}
-                className={`group flex min-h-[86px] flex-col items-start justify-between gap-2 rounded-xl border p-3.5 text-left transition hover:-translate-y-px hover:border-ink hover:shadow-sm ${tipo === t.key ? "border-2 border-ink bg-ground" : "border-line-strong"}`}
+                className={`group flex min-h-[76px] flex-col items-start justify-between gap-2 rounded-xl border p-3 text-left sm:min-h-[86px] sm:p-3.5 transition hover:-translate-y-px hover:border-ink hover:shadow-sm ${tipo === t.key ? "border-2 border-ink bg-ground" : "border-line-strong"}`}
               >
                 <span>
-                  <span className="block text-[15px] font-semibold leading-snug">{t.label}</span>
-                  <span className="block text-[13px] text-ink-muted">{t.hint}</span>
+                  <span className="block text-[14px] font-semibold leading-snug sm:text-[15px]">{t.label}</span>
+                  <span className="hidden text-[13px] text-ink-muted sm:block">{t.hint}</span>
                 </span>
                 <span className="flex gap-1" aria-hidden>
                   {t.roles.map((r) => (

@@ -26,10 +26,6 @@ export function shiftHours(start: string, end: string, start2?: string | null, e
 }
 
 /** ¿Es un turno partido? */
-export function isSplit(def: Pick<ShiftDef, "start2" | "end2">): boolean {
-  return Boolean(def.start2 && def.end2);
-}
-
 /**
  * Tramos de una franja en horas desde las 00:00 de su día (el segundo, si
  * existe, siempre va después del primero; los finales pueden pasar de 24).
@@ -104,7 +100,7 @@ export function restViolations(row: Code[], shifts: ShiftCatalog, minRestHours: 
 }
 
 /** Días que el empleado trabaja en la semana. */
-export function workDays(row: Code[]): number {
+function workDays(row: Code[]): number {
   return row.filter((c) => c !== FREE).length;
 }
 

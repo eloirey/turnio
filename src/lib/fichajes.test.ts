@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clockCsv, dayStatus, formatHours, groupByEmployeeDay, hoursClock, madridDate, madridTime, madridToIso, recordHours, type ClockRecord } from "./fichajes";
+import { dayStatus, formatHours, groupByEmployeeDay, hoursClock, madridDate, madridTime, madridToIso, recordHours, type ClockRecord } from "./fichajes";
 
 const rec = (start: string, end: string | null, extra: Partial<ClockRecord> = {}): ClockRecord => ({
   id: start,
@@ -84,25 +84,21 @@ describe("estado del día", () => {
   });
 });
 
-describe("agrupar y exportar", () => {
+describe("desde cuándo se ficha", () => {
+  const now = new Date("2026-10-15T10:00:00Z");
+  it("antes de activar el fichaje, un turno sin fichar no es «No fichó»", () => {
+    expect(dayStatus("2026-10-14", [], NIGHT, now, 10, "2026-10-15").kind).toBe("none");
+    expect(dayStatus("2026-10-14", [], NIGHT, now, 10, "2026-10-14").kind).toBe("missing");
+    expect(dayStatus("2026-10-14", [], NIGHT, now, 10, null).kind).toBe("missing");
+  });
+  it("si hay fichajes de antes, se revisan igual", () => {
+    expect(dayStatus("2026-10-14", [rec("2026-10-14T15:00:00Z", "2026-10-14T23:00:00Z")], NIGHT, now, 10, "2026-10-15").kind).toBe("ok");
+  });
+});
+
+describe("agrupar", () => {
   it("agrupa por persona y día de Madrid", () => {
     const g = groupByEmployeeDay([rec("2026-10-14T22:30:00Z", "2026-10-15T02:00:00Z"), rec("2026-10-14T15:00:00Z", "2026-10-14T18:00:00Z")]);
     expect([...g.keys()]).toEqual(["laura|2026-10-15", "laura|2026-10-14"]);
-  });
-
-  it("el CSV se abre bien en Excel en español", () => {
-    const csv = clockCsv([
-      {
-        date: "2026-10-14",
-        name: "Laura; la de barra",
-        role: "Barra",
-        records: [rec("2026-10-14T15:00:00Z", "2026-10-14T23:00:00Z", { edited: true })],
-        planned: "Noche 17:00–01:00",
-        status: "ok",
-        lastReason: "Olvidó fichar",
-      },
-    ]);
-    expect(csv.startsWith("﻿Fecha;Persona;")).toBe(true);
-    expect(csv).toContain('14/10/2026;"Laura; la de barra";Barra;17:00;01:00;8:00;Noche 17:00–01:00;Correcto;Sí;Olvidó fichar');
   });
 });

@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { useConfirm, useToast } from "@/components/feedback";
 import { NavLink, useIsDemo } from "@/components/nav";
 import { ui } from "@/components/ui";
-import { ABSENCE_LABELS, type AbsenceReason, type AusenciaRow, type EmployeeRecord } from "@/lib/data/mappers";
-import { DAY_LONG, DAY_SHORT, rangeLabel, shortDateLabel } from "@/lib/dates";
+import { ABSENCE_LABELS, type AusenciaRow, type EmployeeRecord } from "@/lib/data/mappers";
+import { DAY_LONG, DAY_SHORT } from "@/lib/dates";
 import { employeePath } from "@/lib/employee-link";
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import { shiftTimes } from "@/lib/schedule/rules";
@@ -14,6 +14,7 @@ import { personalLinkMessage, personalLinkMessageNoLink } from "@/lib/messages";
 import { telegramLink } from "@/lib/share";
 import { whatsappLink } from "@/lib/whatsapp";
 import * as serverActions from "./actions";
+import { AbsencesCard } from "./AbsencesCard";
 
 export interface EmployeeActions {
   saveEmployee: typeof serverActions.saveEmployee;
@@ -290,45 +291,46 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
             <h2 className={ui.h2}>Disponibilidad</h2>
             <p className="mb-4 mt-1 text-sm text-ink-soft">Marca cuándo puede trabajar. El generador nunca le pondrá un turno fuera de lo marcado.</p>
             <div className="overflow-x-auto">
-              <div className="flex min-w-[560px] flex-col gap-1.5">
-                <div className="grid grid-cols-[112px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5 text-[13px] font-semibold text-ink-muted">
-                  <span />
+              <div className="flex flex-col gap-3 sm:min-w-[560px] sm:gap-1.5">
+                {/* Días: en el móvil, una fila de 7 sobre las casillas; en el ordenador, con columna de nombre. */}
+                <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-semibold text-ink-muted sm:grid-cols-[112px_repeat(7,minmax(40px,1fr))_76px] sm:gap-1.5 sm:text-[13px]">
+                  <span className="hidden sm:block" />
                   {DAY_SHORT.map((d) => (
-                    <span key={d} className="text-center">
-                      {d}
-                    </span>
+                    <span key={d}>{d}</span>
                   ))}
-                  <span />
+                  <span className="hidden sm:block" />
                 </div>
                 {slots.map((slot) => {
                   const week = draft.availability[slot] ?? Array<boolean>(7).fill(false);
                   const all = week.every(Boolean);
                   return (
-                    <div key={slot} className="grid grid-cols-[112px_repeat(7,minmax(48px,1fr))_76px] items-center gap-1.5">
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold" title={shifts[slot].label}>
-                          {shifts[slot].label}
+                    <div key={slot} className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[112px_repeat(7,minmax(40px,1fr))_76px] sm:items-center">
+                      <div className="flex items-baseline justify-between gap-2 sm:contents">
+                        <span className="min-w-0">
+                          <span className="truncate text-sm font-semibold sm:block" title={shifts[slot].label}>
+                            {shifts[slot].label}
+                          </span>
+                          <span className="ml-1.5 text-[11px] text-ink-muted tabular-nums sm:ml-0 sm:block">{shiftTimes(shifts[slot])}</span>
                         </span>
-                        <span className="block text-[11px] text-ink-muted tabular-nums">
-                          {shiftTimes(shifts[slot])}
-                        </span>
-                      </span>
-                      {week.map((on, day) => (
-                        <button
-                          key={day}
-                          type="button"
-                          role="checkbox"
-                          aria-checked={on}
-                          aria-label={`${shifts[slot].label} del ${DAY_LONG[day]}`}
-                          onClick={() => toggle(slot, day)}
-                          className={`flex h-11 items-center justify-center rounded-lg border text-base transition ${on ? "border-accent bg-accent text-white" : "border-line-strong bg-surface text-transparent hover:border-ink"}`}
-                        >
-                          ✓
+                        <button type="button" onClick={() => setRow(slot, !all)} className="rounded-lg px-2 text-xs font-semibold text-accent hover:bg-ground sm:order-last sm:h-11 sm:text-ink-muted">
+                          {all ? "Ninguno" : "Todos"}
                         </button>
-                      ))}
-                      <button type="button" onClick={() => setRow(slot, !all)} className="h-11 rounded-lg text-xs font-semibold text-ink-muted hover:bg-ground">
-                        {all ? "Ninguno" : "Todos"}
-                      </button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 sm:contents">
+                        {week.map((on, day) => (
+                          <button
+                            key={day}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={on}
+                            aria-label={`${shifts[slot].label} del ${DAY_LONG[day]}`}
+                            onClick={() => toggle(slot, day)}
+                            className={`flex h-11 items-center justify-center rounded-lg border text-base transition ${on ? "border-accent bg-accent text-white" : "border-line-strong bg-surface text-transparent hover:border-ink"}`}
+                          >
+                            ✓
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   );
                 })}
@@ -492,8 +494,9 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                   {current.name} verá siempre su horario aquí, sin registrarse, podrá fichar y añadirlo a su calendario del móvil. Envíaselo una vez.
                   {isDemo && " (En la demo este enlace no funciona.)"}
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <code className="min-w-0 flex-1 truncate rounded-lg bg-ground px-3 py-2.5 text-sm">{personalLink}</code>
+                  <div className="grid grid-cols-3 gap-2 sm:flex">
                   <button onClick={copyLink} className={`${ui.btnSm} ${ui.secondary}`}>
                     Copiar
                   </button>
@@ -513,6 +516,7 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                   >
                     Telegram
                   </a>
+                  </div>
                 </div>
                 <p className="mt-3 rounded-lg bg-ground px-3 py-2.5 text-[13px] leading-relaxed text-ink-soft">
                   <strong className="text-ink">Es único y no se debe compartir:</strong> quien lo tenga puede ver el horario de {current.name} y fichar a su nombre. Si lo pierde o se lo pasa a alguien,{" "}
@@ -553,113 +557,3 @@ function summaryOf(d: Draft, rules: Rules): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function AbsencesCard(props: {
-  employee: EmployeeRecord;
-  actions: EmployeeActions;
-  absences: AusenciaRow[];
-  today: string;
-  onToast: (t: { message: string; tone?: "info" | "error" } | string) => void;
-  confirm: (o: { title: string; body?: string; confirmLabel?: string; danger?: boolean }) => Promise<boolean>;
-}) {
-  const { employee, absences, today, onToast, confirm, actions } = props;
-  const [open, setOpen] = useState(false);
-  const [desde, setDesde] = useState(today);
-  const [hasta, setHasta] = useState(today);
-  const [motivo, setMotivo] = useState<AbsenceReason>("vacaciones");
-  const [nota, setNota] = useState("");
-  const [pending, start] = useTransition();
-
-  function add() {
-    start(async () => {
-      const res = await actions.addAbsence({ empleadoId: employee.id, desde, hasta: hasta < desde ? desde : hasta, motivo, nota });
-      if (!res.ok) return onToast({ message: res.error, tone: "error" });
-      setOpen(false);
-      setNota("");
-      onToast(`${ABSENCE_LABELS[motivo]} de ${employee.name} guardada. El generador ya la tiene en cuenta.`);
-    });
-  }
-
-  async function remove(a: AusenciaRow) {
-    const ok = await confirm({ title: "¿Borrar esta ausencia?", body: `${ABSENCE_LABELS[a.motivo]}: ${rangeLabel(a.desde, a.hasta)}.`, confirmLabel: "Borrar", danger: true });
-    if (!ok) return;
-    start(async () => {
-      const res = await actions.deleteAbsence(a.id);
-      onToast(res.ok ? "Ausencia borrada." : { message: res.error, tone: "error" });
-    });
-  }
-
-  return (
-    <div className={`${ui.card} p-6`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className={ui.h2}>Ausencias</h2>
-          <p className="mt-1 text-sm text-ink-soft">Vacaciones, bajas o permisos. Esos días no se le asignan turnos.</p>
-        </div>
-        {!open && (
-          <button onClick={() => setOpen(true)} className={`${ui.btnSm} ${ui.secondary}`}>
-            + Añadir ausencia
-          </button>
-        )}
-      </div>
-
-      {open && (
-        <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl bg-ground p-4 sm:grid-cols-2">
-          <label className={ui.label}>
-            Motivo
-            <select value={motivo} onChange={(e) => setMotivo(e.target.value as AbsenceReason)} className={ui.input}>
-              {(Object.keys(ABSENCE_LABELS) as AbsenceReason[]).map((k) => (
-                <option key={k} value={k}>
-                  {ABSENCE_LABELS[k]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={ui.label}>
-            Nota <span className="font-normal text-ink-muted">(opcional)</span>
-            <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={200} placeholder="Viaje, médico…" className={ui.input} />
-          </label>
-          <label className={ui.label}>
-            Desde
-            <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className={ui.input} />
-          </label>
-          <label className={ui.label}>
-            Hasta
-            <input type="date" value={hasta} min={desde} onChange={(e) => setHasta(e.target.value)} className={ui.input} />
-          </label>
-          <div className="flex justify-end gap-2 sm:col-span-2">
-            <button onClick={() => setOpen(false)} className={`${ui.btnSm} ${ui.secondary}`}>
-              Cancelar
-            </button>
-            <button onClick={add} disabled={pending || !desde} className={`${ui.btnSm} ${ui.primary}`}>
-              {pending ? "Guardando…" : "Guardar ausencia"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {absences.length > 0 ? (
-        <ul className="mt-4 flex flex-col divide-y divide-[#EEEBE3]">
-          {absences.map((a) => {
-            const now = a.desde <= today && a.hasta >= today;
-            return (
-              <li key={a.id} className="flex items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <div className="text-[15px] font-semibold">
-                    {ABSENCE_LABELS[a.motivo]} · {rangeLabel(a.desde, a.hasta)}
-                    {now && <span className="ml-2 rounded-full bg-pending-soft px-2 py-0.5 text-[11px] font-semibold text-pending-ink">Ahora</span>}
-                  </div>
-                  {a.nota && <div className="truncate text-[13px] text-ink-muted">{a.nota}</div>}
-                </div>
-                <button onClick={() => remove(a)} disabled={pending} aria-label={`Borrar ausencia del ${shortDateLabel(a.desde)}`} className="flex h-10 w-10 flex-none items-center justify-center rounded-lg text-ink-muted hover:bg-ground">
-                  ✕
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        !open && <p className="mt-3 text-sm text-ink-muted">No tiene ausencias próximas.</p>
-      )}
-    </div>
-  );
-}

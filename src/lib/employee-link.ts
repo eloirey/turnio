@@ -8,7 +8,7 @@
  */
 
 /** "María José" → "maria-jose" (sin acentos ni símbolos, máximo 24 caracteres). */
-export function nameSlug(name: string): string {
+function nameSlug(name: string): string {
   return name
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")

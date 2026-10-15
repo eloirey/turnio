@@ -251,7 +251,7 @@ export const SCHEDULE_MODELS: { key: ScheduleModel; title: string; detail: strin
   { key: "all", title: "Todo junto", detail: "Las tres anteriores en un mismo Excel, una en cada hoja.", csv: false },
 ];
 
-export function gridTable(input: ScheduleExportInput): Table {
+function gridTable(input: ScheduleExportInput): Table {
   return {
     sheet: "Cuadrante",
     title: exportTitle(input),
@@ -260,7 +260,7 @@ export function gridTable(input: ScheduleExportInput): Table {
   };
 }
 
-export function dayTable(input: ScheduleExportInput): Table {
+function dayTable(input: ScheduleExportInput): Table {
   const withNeeds = Boolean(input.demand);
   return {
     sheet: "Por día",
@@ -270,7 +270,7 @@ export function dayTable(input: ScheduleExportInput): Table {
   };
 }
 
-export function listTable(input: ScheduleExportInput): Table {
+function listTable(input: ScheduleExportInput): Table {
   return {
     sheet: "Turnos",
     title: exportTitle(input),

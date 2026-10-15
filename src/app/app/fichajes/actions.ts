@@ -111,7 +111,7 @@ export async function exportClock(month: string): Promise<ExportResult> {
       const slot = period.planned.find((x) => x.employeeId === p.id && x.date === date)?.slot;
       const shift = slot ? shifts[slot] : undefined;
       if (!records.length && !shift) continue;
-      const status = dayStatus(date, records, shift ?? null, now, settings.clockMarginMinutes);
+      const status = dayStatus(date, records, shift ?? null, now, settings.clockMarginMinutes, settings.clockSince);
       const reasonOf = [...records].reverse().find((r) => r.edited && lastReason.has(r.id));
       rows.push({
         date,

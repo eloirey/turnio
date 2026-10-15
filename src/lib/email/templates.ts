@@ -9,8 +9,8 @@
  * imagen y el texto usa fuentes del sistema.
  */
 
-export const SITE = "https://rotafy.es";
-export const CONTACT = "hola@rotafy.es";
+const SITE = "https://rotafy.es";
+const CONTACT = "hola@rotafy.es";
 
 const C = {
   ground: "#F4F3EE",
@@ -46,7 +46,7 @@ export interface EmailParts {
 const p = (html: string, last = false) =>
   `<p style="margin:0 0 ${last ? 0 : 16}px;font-family:${FONT};font-size:16px;line-height:1.6;color:${C.soft};">${html}</p>`;
 
-export function layout(e: EmailParts): string {
+function layout(e: EmailParts): string {
   const { url, label } = e.button;
   return `<!DOCTYPE html>
 <html lang="es" xmlns="http://www.w3.org/1999/xhtml">
