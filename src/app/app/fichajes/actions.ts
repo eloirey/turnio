@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addDays, isValidISODate, todayInMadrid } from "@/lib/dates";
 import { getClockPeriod, requireLocal } from "@/lib/data/queries";
-import { clockCsv, dayStatus, groupByEmployeeDay, madridToIso } from "@/lib/fichajes";
+import { dayStatus, groupByEmployeeDay, madridToIso, type ClockDayRow } from "@/lib/fichajes";
 import { timeField } from "@/lib/forms";
 import { toHours } from "@/lib/schedule/rules";
 import { createClient } from "@/lib/supabase/server";
@@ -76,7 +76,8 @@ export async function deleteClock(id: string, why: string): Promise<Result> {
   return { ok: true };
 }
 
-export type ExportResult = { ok: true; csv: string; filename: string } | { ok: false; error: string };
+/** Los datos del mes; el archivo (Excel o CSV, y el modelo) lo monta el navegador. */
+export type ExportResult = { ok: true; rows: ClockDayRow[]; month: string; localName: string; fileBase: string; now: string } | { ok: false; error: string };
 
 /** Registro de jornada de un mes en CSV (para Excel o la gestoría). */
 export async function exportClock(month: string): Promise<ExportResult> {
@@ -98,7 +99,7 @@ export async function exportClock(month: string): Promise<ExportResult> {
   const lastReason = new Map<string, string>();
   for (const ch of period.changes) lastReason.set(ch.recordId, ch.reason);
 
-  const rows = [];
+  const rows: ClockDayRow[] = [];
   for (let date = first; date <= last && date <= today; date = addDays(date, 1)) {
     for (const p of people) {
       const records = byDay.get(`${p.id}|${date}`) ?? [];
@@ -113,6 +114,7 @@ export async function exportClock(month: string): Promise<ExportResult> {
         role: p.role,
         records,
         planned: shift ? `${shift.label} ${shift.start}–${shift.end}` : "",
+        plannedHours: shift?.hours ?? 0,
         status: status.kind,
         lastReason: reasonOf ? lastReason.get(reasonOf.id) : undefined,
       });
@@ -124,5 +126,5 @@ export async function exportClock(month: string): Promise<ExportResult> {
     .replace(/[^A-Za-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .toLowerCase();
-  return { ok: true, csv: clockCsv(rows, now), filename: `registro-jornada-${slug || "local"}-${month}.csv` };
+  return { ok: true, rows, month, localName: local.nombre, fileBase: `registro-jornada-${slug || "local"}-${month}`, now: now.toISOString() };
 }

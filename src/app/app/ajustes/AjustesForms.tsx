@@ -215,7 +215,7 @@ function DangerCard({ localName, remove, onError }: { localName: string; remove:
     <section className="rounded-2xl border border-danger/30 bg-surface p-6">
       <h2 className={ui.h2}>Borrar la cuenta</h2>
       <p className="mt-1 text-sm text-ink-soft">
-        Se borra tu cuenta y todo lo de «{localName}»: equipo, cuadrantes, fichajes e historial. Los enlaces de tu equipo dejarán de funcionar. No se puede deshacer. Si usas el fichaje, descarga antes el registro de jornada (Fichajes → Exportar a Excel).
+        Se borra tu cuenta y todo lo de «{localName}»: equipo, cuadrantes, fichajes e historial. Los enlaces de tu equipo dejarán de funcionar. No se puede deshacer. Si usas el fichaje, descarga antes el registro de jornada (Fichajes → Exportar registro).
       </p>
       {!open ? (
         <button onClick={() => setOpen(true)} className={`${ui.btnSm} ${ui.danger} mt-4`}>

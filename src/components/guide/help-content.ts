@@ -79,7 +79,7 @@ export const HELP: Record<string, ScreenHelp> = {
       },
       {
         q: "¿Cómo saco el registro para la gestoría o la Inspección?",
-        a: "Pulsa «Exportar a Excel» y elige el mes. Se descarga un archivo que se abre con Excel con todas las entradas, salidas, horas y correcciones.",
+        a: "Pulsa «Exportar registro…»: eliges el mes, qué quieres (registro detallado, resumen por persona u horas por día) y si lo quieres en Excel o CSV. El registro detallado tiene todas las entradas, salidas, horas y correcciones.",
       },
       {
         q: "¿Rotafy guarda los fichajes para siempre?",

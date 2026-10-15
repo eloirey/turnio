@@ -48,7 +48,7 @@ function ShellSkeleton() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isSupabaseConfigured()) return <SetupNotice />;
   return (
-    <div className="min-h-screen bg-ground">
+    <div className="min-h-screen bg-ground print:min-h-0 print:bg-white">
       <Suspense fallback={<ShellSkeleton />}>
         <Shell>{children}</Shell>
       </Suspense>

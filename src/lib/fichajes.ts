@@ -194,18 +194,21 @@ export function groupByEmployeeDay(records: ClockRecord[]): Map<string, ClockRec
  * Registro de jornada en CSV (se abre en Excel). Separador ";" y coma decimal,
  * que es lo que espera Excel en España. Incluye un BOM para que respete las tildes.
  */
-export function clockCsv(
-  rows: {
-    date: string;
-    name: string;
-    role: string;
-    records: ClockRecord[];
-    planned: string;
-    status: DayStatusKind;
-    lastReason?: string;
-  }[],
-  now: Date = new Date(),
-): string {
+/** Un día de una persona en el registro (lo que se exporta). */
+export interface ClockDayRow {
+  date: string;
+  name: string;
+  role: string;
+  records: ClockRecord[];
+  /** Turno previsto, en texto («Mañana 09:00–17:00»), o vacío. */
+  planned: string;
+  /** Horas del turno previsto (0 si no tenía). */
+  plannedHours?: number;
+  status: DayStatusKind;
+  lastReason?: string;
+}
+
+export function clockCsv(rows: ClockDayRow[], now: Date = new Date()): string {
   const esc = (v: string) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   const header = ["Fecha", "Persona", "Puesto", "Entrada", "Salida", "Horas", "Turno previsto", "Estado", "Corregido", "Motivo de la corrección"];
   const lines = [header.join(";")];

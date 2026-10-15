@@ -11,6 +11,7 @@ import {
   isoWeekNumber,
   weekRangeLabel,
 } from "@/lib/dates";
+import type { Table } from "@/lib/export-table";
 import type { Role } from "@/lib/roles";
 import {
   activeSlots,
@@ -37,49 +38,7 @@ export interface ScheduleExportInput {
   demand?: Demand;
 }
 
-export type ExportFormat = "all" | "grid" | "byDay" | "list" | "csv";
 
-export const EXPORT_FORMATS: {
-  key: ExportFormat;
-  title: string;
-  detail: string;
-  ext: "xlsx" | "csv";
-}[] = [
-  {
-    key: "all",
-    title: "Completo",
-    detail:
-      "Un Excel con tres hojas: el cuadrante, quién trabaja cada día y la lista de turnos.",
-    ext: "xlsx",
-  },
-  {
-    key: "grid",
-    title: "Cuadrante semanal",
-    detail:
-      "Personas en filas y días en columnas, con colores. Como el del tablón.",
-    ext: "xlsx",
-  },
-  {
-    key: "byDay",
-    title: "Por día y franja",
-    detail: "Quién trabaja en cada franja de cada día, por puesto.",
-    ext: "xlsx",
-  },
-  {
-    key: "list",
-    title: "Lista de turnos",
-    detail:
-      "Una fila por turno con fecha, horario y horas. Para nóminas o la gestoría.",
-    ext: "xlsx",
-  },
-  {
-    key: "csv",
-    title: "Lista de turnos en CSV",
-    detail:
-      "Lo mismo en texto separado por «;», para importarlo en otros programas.",
-    ext: "csv",
-  },
-];
 
 export interface GridCell {
   kind: "shift" | "free" | "absent";
@@ -273,4 +232,48 @@ export function exportFilename(
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "") || "cuadrante";
   return `cuadrante-${slug}-${monday}${suffix}.${ext}`;
+}
+
+// ---------- Las mismas hojas como tablas (para el CSV) ----------
+
+/** Modelos para elegir al exportar. «Todo» solo existe en Excel (tiene varias hojas). */
+export type ScheduleModel = "all" | "grid" | "byDay" | "list";
+
+export const SCHEDULE_MODELS: { key: ScheduleModel; title: string; detail: string; csv: boolean }[] = [
+  { key: "grid", title: "Cuadrante semanal", detail: "Personas en filas y días en columnas, como el del tablón.", csv: true },
+  { key: "byDay", title: "Por día y franja", detail: "Quién trabaja en cada franja de cada día, por puesto.", csv: true },
+  { key: "list", title: "Lista de turnos", detail: "Una fila por turno con fecha, horario y horas. Para nóminas o la gestoría.", csv: true },
+  { key: "all", title: "Todo junto", detail: "Las tres anteriores en un mismo Excel, una en cada hoja.", csv: false },
+];
+
+export function gridTable(input: ScheduleExportInput): Table {
+  return {
+    sheet: "Cuadrante",
+    title: exportTitle(input),
+    header: ["Persona", "Puesto", ...DAY_SHORT.map((d, i) => `${d} ${dayOfMonth(input.monday, i)}`), "Horas", "Contrato"],
+    rows: gridRows(input).map((r) => [r.name, r.role, ...r.cells.map((c) => c.text.replace("\n", " ")), r.hours, r.contract]),
+  };
+}
+
+export function dayTable(input: ScheduleExportInput): Table {
+  const withNeeds = Boolean(input.demand);
+  return {
+    sheet: "Por día",
+    title: exportTitle(input),
+    header: ["Día", "Franja", "Horario", "Puesto", "Personas", "Cuántas", ...(withNeeds ? ["Necesarias"] : [])],
+    rows: dayRows(input).map((r) => [r.day, r.slot, r.time, r.role, r.people.join(", "), r.people.length, ...(withNeeds ? [r.needed ?? 0] : [])]),
+  };
+}
+
+export function listTable(input: ScheduleExportInput): Table {
+  return {
+    sheet: "Turnos",
+    title: exportTitle(input),
+    header: ["Fecha", "Día", "Persona", "Puesto", "Franja", "Entrada", "Salida", "Horas"],
+    rows: shiftRows(input).map((r) => [r.dateEs, r.day, r.person, r.role, r.slot, r.start, r.end, r.hours]),
+  };
+}
+
+export function scheduleTable(model: Exclude<ScheduleModel, "all">, input: ScheduleExportInput): Table {
+  return model === "grid" ? gridTable(input) : model === "byDay" ? dayTable(input) : listTable(input);
 }
