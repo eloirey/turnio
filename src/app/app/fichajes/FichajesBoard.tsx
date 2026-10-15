@@ -5,6 +5,9 @@ import { useMemo, useState, useTransition } from "react";
 import { useToast } from "@/components/feedback";
 import { NavLink, useIsDemo } from "@/components/nav";
 import { WeekPicker } from "@/components/WeekPicker";
+import { ExportChooser } from "@/components/ExportChooser";
+import { CLOCK_MODELS, clockTable, monthOption } from "@/lib/export-clock";
+import { saveBlob, tableCsv, tablesToXlsx } from "@/lib/export-table";
 import { ui } from "@/components/ui";
 import { addDays, DAY_LONG, DAY_SHORT, dayOfMonth, weekRangeLabel } from "@/lib/dates";
 import {
@@ -267,7 +270,7 @@ export function FichajesBoard(props: Props) {
           <div className="mt-3 rounded-xl bg-accent-soft p-4 text-[13px] leading-relaxed text-accent-ink">
             <strong className="mb-1 block text-sm">Guarda tu copia cada mes</strong>
             La ley pide conservar el registro de jornada 4 años y enseñarlo si lo piden la persona, sus representantes o la Inspección. Rotafy lo mantiene
-            mientras uses tu cuenta, pero no es un archivo: la copia que cuenta es la tuya. A principio de mes, pulsa «Exportar a Excel» y guárdala (o mándala a
+            mientras uses tu cuenta, pero no es un archivo: la copia que cuenta es la tuya. A principio de mes, pulsa «Exportar registro…» y guárdala (o mándala a
             tu gestoría).{" "}
             <a href="/legal/aviso-legal" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">
               Condiciones
@@ -535,55 +538,53 @@ function DayEditor(props: {
 
 function ExportMenu({ monday, today, exportClock, onError }: { monday: string; today: string; exportClock: NonNullable<ClockActions["exportClock"]>; onError: (m: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [pending, start] = useTransition();
   const months = useMemo(() => {
     const list: string[] = [];
     const [y, m] = (monday > today ? today : monday).split("-").map(Number);
-    for (let k = 0; k < 12; k++) {
-      const d = new Date(Date.UTC(y, m - 1 - k, 1));
-      list.push(d.toISOString().slice(0, 7));
-    }
+    for (let k = 0; k < 12; k++) list.push(new Date(Date.UTC(y, m - 1 - k, 1)).toISOString().slice(0, 7));
     return list;
   }, [monday, today]);
-  const label = (ym: string) => {
-    const [y, m] = ym.split("-").map(Number);
-    return new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, 1)));
-  };
-
-  function download(month: string) {
-    setOpen(false);
-    start(async () => {
-      const res = await exportClock(month);
-      if (!res.ok) return onError(res.error);
-      const url = URL.createObjectURL(new Blob([res.csv], { type: "text/csv;charset=utf-8" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = res.filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
-  }
+  const [month, setMonth] = useState(months[0]);
 
   return (
-    <div className="relative">
-      <button onClick={() => setOpen((o) => !o)} disabled={pending} aria-expanded={open} className={`${ui.btn} ${ui.secondary}`}>
-        {pending ? "Preparando…" : "Exportar a Excel ▾"}
+    <>
+      <button onClick={() => setOpen(true)} className={`${ui.btn} ${ui.secondary}`}>
+        Exportar registro…
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div role="menu" className="absolute right-0 z-40 mt-2 max-h-[min(420px,70vh)] w-64 overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-lg">
-            <div className="px-4 py-2 text-xs text-ink-muted">Registro de jornada del mes, listo para la gestoría</div>
-            {months.map((m) => (
-              <button key={m} role="menuitem" onClick={() => download(m)} className="block w-full px-4 py-2.5 text-left text-[15px] capitalize hover:bg-ground">
-                {label(m)}
-              </button>
-            ))}
-          </div>
-        </>
+        <ExportChooser
+          title="Exportar el registro de jornada"
+          subtitle="Guarda tu copia cada mes o mándala a tu gestoría."
+          before={{
+            label: "¿De qué mes?",
+            content: (
+              <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${ui.input} w-full`} aria-label="Mes">
+                {months.map((m) => (
+                  <option key={m} value={m}>
+                    {monthOption(m)}
+                  </option>
+                ))}
+              </select>
+            ),
+          }}
+          models={CLOCK_MODELS}
+          storageKey="rotafy:exportar-fichajes"
+          onClose={() => setOpen(false)}
+          onDownload={async (model, format) => {
+            try {
+              const res = await exportClock(month);
+              if (!res.ok) return onError(res.error);
+              const table = clockTable(model, res.rows, res.month, res.localName, new Date(res.now));
+              const suffix = model === "detail" ? "" : model === "summary" ? "-resumen" : "-por-dia";
+              if (format === "csv") saveBlob(new Blob([tableCsv(table)], { type: "text/csv;charset=utf-8" }), `${res.fileBase}${suffix}.csv`);
+              else saveBlob(await tablesToXlsx([table]), `${res.fileBase}${suffix}.xlsx`);
+              setOpen(false);
+            } catch {
+              onError("No se ha podido crear el archivo. Inténtalo de nuevo.");
+            }
+          }}
+        />
       )}
-    </div>
+    </>
   );
 }

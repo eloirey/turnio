@@ -1,115 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ui } from "@/components/ui";
-import { dayRows, EXPORT_FORMATS, exportFilename, exportTitle, gridRows, scheduleCsv, shiftRows, type ExportFormat, type ScheduleExportInput } from "@/lib/export-schedule";
+import { ExportChooser } from "@/components/ExportChooser";
+import { exportFilename, exportTitle, dayRows, gridRows, SCHEDULE_MODELS, scheduleTable, shiftRows, type ScheduleExportInput, type ScheduleModel } from "@/lib/export-schedule";
+import { saveBlob, tableCsv } from "@/lib/export-table";
 import { DAY_SHORT, dayOfMonth } from "@/lib/dates";
 import { PALETTE } from "@/lib/roles";
 
-const KEY = "rotafy:formato-exportar";
-
-/** Elige el formato y descarga el cuadrante de la semana. */
+/** Exportar el cuadrante: primero qué (modelo) y después en qué formato. */
 export function ExportDialog({ input, onClose, onError }: { input: ScheduleExportInput; onClose: () => void; onError: (m: string) => void }) {
-  const [format, setFormat] = useState<ExportFormat>(() => {
-    try {
-      const saved = window.localStorage.getItem(KEY) as ExportFormat | null;
-      return EXPORT_FORMATS.some((f) => f.key === saved) ? (saved as ExportFormat) : "all";
-    } catch {
-      return "all";
-    }
-  });
-  const [busy, setBusy] = useState(false);
-  const firstRef = useRef<HTMLInputElement>(null);
-
-  const closeRef = useRef(onClose);
-  useEffect(() => {
-    closeRef.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    firstRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  async function download() {
-    setBusy(true);
-    try {
-      try {
-        window.localStorage.setItem(KEY, format);
-      } catch {
-        // sin almacenamiento: no pasa nada
-      }
-      if (format === "csv") {
-        save(new Blob([scheduleCsv(input)], { type: "text/csv;charset=utf-8" }), exportFilename(input.localName, input.monday, "csv"));
-      } else {
-        const blob = await buildWorkbook(input, format);
-        save(blob, exportFilename(input.localName, input.monday, "xlsx"));
-      }
-      onClose();
-    } catch {
-      onError("No se ha podido crear el archivo. Inténtalo de nuevo.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-0 backdrop-blur-[2px] sm:items-center sm:p-4 print:hidden" role="dialog" aria-modal="true" aria-labelledby="export-title">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-2xl sm:rounded-3xl">
-        <h2 id="export-title" className="font-display text-2xl font-bold">
-          Exportar el cuadrante
-        </h2>
-        <p className="mt-1 text-sm text-ink-soft">{exportTitle(input)}</p>
-        <fieldset className="mt-5 flex flex-col gap-2">
-          <legend className="sr-only">Formato</legend>
-          {EXPORT_FORMATS.map((f, i) => (
-            <label
-              key={f.key}
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${format === f.key ? "border-2 border-ink bg-ground" : "border-line-strong hover:border-ink"}`}
-            >
-              <input
-                ref={i === 0 ? firstRef : undefined}
-                type="radio"
-                name="formato"
-                value={f.key}
-                checked={format === f.key}
-                onChange={() => setFormat(f.key)}
-                className="mt-1 h-4 w-4 flex-none accent-[#1F5C46]"
-              />
-              <span className="min-w-0">
-                <span className="flex items-center gap-2 text-[15px] font-semibold">
-                  {f.title}
-                  <span className="rounded bg-line px-1.5 py-0.5 text-[11px] font-semibold uppercase text-ink-soft">.{f.ext}</span>
-                </span>
-                <span className="block text-[13px] leading-snug text-ink-muted">{f.detail}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={`${ui.btn} ${ui.secondary}`}>
-            Cancelar
-          </button>
-          <button type="button" onClick={download} disabled={busy} className={`${ui.btn} ${ui.primary}`}>
-            {busy ? "Preparando…" : "Descargar"}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ExportChooser
+      title="Exportar el cuadrante"
+      subtitle={exportTitle(input)}
+      models={SCHEDULE_MODELS}
+      storageKey="rotafy:exportar-cuadrante"
+      onClose={onClose}
+      onDownload={async (model, format) => {
+        try {
+          if (format === "csv" && model !== "all") {
+            const suffix = model === "grid" ? "" : model === "byDay" ? "-por-dia" : "-turnos";
+            saveBlob(new Blob([tableCsv(scheduleTable(model, input))], { type: "text/csv;charset=utf-8" }), exportFilename(input.localName, input.monday, "csv", suffix));
+          } else {
+            saveBlob(await buildWorkbook(input, model), exportFilename(input.localName, input.monday, "xlsx"));
+          }
+          onClose();
+        } catch {
+          onError("No se ha podido crear el archivo. Inténtalo de nuevo.");
+        }
+      }}
+    />
   );
-}
-
-function save(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ---------- Excel ----------
@@ -121,7 +41,7 @@ const LINE = "#E4E1D8";
 const GROUND = "#F4F3EE";
 const ACCENT = "#1F5C46";
 
-export async function buildWorkbook(input: ScheduleExportInput, format: Exclude<ExportFormat, "csv">): Promise<Blob> {
+export async function buildWorkbook(input: ScheduleExportInput, format: ScheduleModel): Promise<Blob> {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
   wb.creator = "Rotafy";

@@ -18,7 +18,7 @@ import { NecesidadesEditor } from "@/app/app/necesidades/NecesidadesEditor";
 import { OnboardingForm } from "@/app/bienvenida/OnboardingForm";
 import { absencesForWeek, gridToTurnos } from "@/lib/data/mappers";
 import { addDays, dayOfMonth, isValidISODate } from "@/lib/dates";
-import { clockCsv, dayStatus, groupByEmployeeDay, madridToIso, type ClockRecord } from "@/lib/fichajes";
+import { dayStatus, groupByEmployeeDay, madridToIso, type ClockDayRow, type ClockRecord } from "@/lib/fichajes";
 import { employeeSchema, firstError, necesidadesSchema, settingsSchema } from "@/lib/forms";
 import { makeRoleKey } from "@/lib/roles";
 import { toHours } from "@/lib/schedule/rules";
@@ -226,7 +226,7 @@ export function DemoApp() {
         const s = stateRef.current!;
         const byDay = groupByEmployeeDay(s.records);
         const roleName = Object.fromEntries(s.roles.map((r) => [r.key, r.name]));
-        const rows = [];
+        const rows: ClockDayRow[] = [];
         for (let d = 0; d < 7; d++) {
           const date = addDays(s.monday, d);
           if (date > s.today || !date.startsWith(month)) continue;
@@ -241,12 +241,13 @@ export function DemoApp() {
               role: roleName[e.role] ?? e.role,
               records,
               planned: shift ? `${shift.label} ${shift.start}–${shift.end}` : "",
+              plannedHours: shift?.hours ?? 0,
               status: dayStatus(date, records, shift, new Date(s.now), s.settings.clockMarginMinutes).kind,
               lastReason: [...s.changes].reverse().find((ch) => records.some((r) => r.id === ch.recordId))?.reason,
             });
           }
         }
-        return next({ ok: true as const, csv: clockCsv(rows, new Date(s.now)), filename: `registro-jornada-demo-${month}.csv` });
+        return next({ ok: true as const, rows, month, localName: s.name, fileBase: `registro-jornada-demo-${month}`, now: s.now });
       },
     }),
     [],
@@ -346,7 +347,7 @@ export function DemoApp() {
 
   return (
     <NavProvider onNavigate={go}>
-      <div className="min-h-screen bg-ground pb-40">
+      <div className="min-h-screen bg-ground pb-40 print:min-h-0 print:bg-white print:pb-0">
         <AppHeader
           localName={state.name}
           nav={NAV}
@@ -374,7 +375,7 @@ export function DemoApp() {
             </>
           }
         />
-        <div className="mx-auto max-w-[1400px] px-4 pt-4 sm:px-8">
+        <div className="mx-auto max-w-[1400px] px-4 pt-4 sm:px-8 print:hidden">
           <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-pending-soft px-4 py-2.5 text-sm text-pending-ink">
             <span>
               <strong>Demo:</strong> todo funciona de verdad, pero nada se guarda al cerrar la página.

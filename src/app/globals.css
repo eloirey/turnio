@@ -66,6 +66,8 @@ body {
 @media print {
   @page { size: A4 landscape; margin: 10mm; }
   body { background: #fff; }
+  /* Que se impriman los colores de los puestos */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* Demo: resalta el botón que la guía pide pulsar */
