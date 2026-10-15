@@ -10,6 +10,7 @@ import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import { SLOTS, type Slot } from "@/lib/schedule/types";
 import { whatsappLink } from "@/lib/whatsapp";
 import { addAbsence, deleteAbsence, deleteEmployee, saveEmployee } from "./actions";
+import { employeePath } from "@/lib/employee-link";
 
 const SLOT_LABEL: Record<Slot, string> = { M: "Mañana", T: "Tarde", N: "Noche" };
 
@@ -58,7 +59,7 @@ export function EmpleadosManager({ employees, roles, absences, today, baseUrl, l
   const roleById = roleMap(roles);
 
   const current = draft.id ? employees.find((e) => e.id === draft.id) : undefined;
-  const personalLink = current ? `${baseUrl}/h/${current.token}` : "";
+  const personalLink = current ? `${baseUrl}/h/${employeePath(current.name, current.token)}` : "";
   const myAbsences = current ? absences.filter((a) => a.empleado_id === current.id) : [];
   const absentNow = (id: string) => absences.find((a) => a.empleado_id === id && a.desde <= today && a.hasta >= today);
 

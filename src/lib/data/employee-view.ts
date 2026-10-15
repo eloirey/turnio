@@ -2,6 +2,7 @@ import "server-only";
 import { addDays, mondayOf, todayInMadrid } from "@/lib/dates";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { franjasToCatalog, snapshotToGrid, type AbsenceReason, type FranjaRow, type Snapshot } from "./mappers";
+import { tokenFromPath } from "@/lib/employee-link";
 
 /**
  * Datos para la vista pública del empleado (/h/<token>) y su calendario.
@@ -23,8 +24,10 @@ interface Me {
   local_id: string;
 }
 
-export async function getEmployeeByToken(token: string): Promise<Me | null> {
-  if (!/^[a-f0-9]{32}$/.test(token)) return null;
+/** Acepta el enlace con nombre ("laura-<token>") o solo el token. */
+export async function getEmployeeByToken(param: string): Promise<Me | null> {
+  const token = tokenFromPath(param);
+  if (!token) return null;
   const db = createAdminClient();
   const { data } = await db
     .from("empleados")

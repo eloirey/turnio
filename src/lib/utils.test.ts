@@ -1,3 +1,4 @@
+import { employeePath, tokenFromPath } from "./employee-link";
 import { describe, expect, it } from "vitest";
 import {
   addDays,
@@ -188,5 +189,26 @@ describe("calendario .ics", () => {
     const folded = foldLine("SUMMARY:" + "á".repeat(60));
     for (const part of folded.split("\r\n")) expect(new TextEncoder().encode(part).length).toBeLessThanOrEqual(75);
     expect(folded.split("\r\n").slice(1).every((p) => p.startsWith(" "))).toBe(true);
+  });
+});
+
+describe("enlace personal con nombre", () => {
+  const token = "ecfdc46614114b71b2c2d5168cb6efd1";
+  it("pone el nombre delante del token, sin acentos ni símbolos", () => {
+    expect(employeePath("Laura", token)).toBe(`laura-${token}`);
+    expect(employeePath("María José Núñez", token)).toBe(`maria-jose-nunez-${token}`);
+    expect(employeePath("  ¡¡  ", token)).toBe(token);
+  });
+  it("saca el token del enlace nuevo y del antiguo", () => {
+    expect(tokenFromPath(`laura-${token}`)).toBe(token);
+    expect(tokenFromPath(token)).toBe(token);
+    expect(tokenFromPath(`maria-jose-${token}`)).toBe(token);
+    expect(tokenFromPath(encodeURIComponent(`maría-${token}`))).toBe(token);
+  });
+  it("rechaza enlaces sin un token válido", () => {
+    expect(tokenFromPath("laura")).toBeNull();
+    expect(tokenFromPath(`laura${token}`)).toBeNull(); // sin guion no es un token separado
+    expect(tokenFromPath(token.slice(1))).toBeNull();
+    expect(tokenFromPath(`${token}x`)).toBeNull();
   });
 });

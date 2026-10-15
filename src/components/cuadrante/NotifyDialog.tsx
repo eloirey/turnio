@@ -5,6 +5,7 @@ import { ui } from "@/components/ui";
 import { groupScheduleMessage, personalScheduleMessage, shiftLines } from "@/lib/messages";
 import type { Code, ShiftCatalog } from "@/lib/schedule/types";
 import { whatsappLink } from "@/lib/whatsapp";
+import { employeePath } from "@/lib/employee-link";
 
 export interface NotifyEmployee {
   id: string;
@@ -69,7 +70,7 @@ export function NotifyDialog({ employees, shifts, monday, baseUrl, localName, ga
 
         <ul className="flex-1 overflow-y-auto p-3">
           {employees.map((e) => {
-            const link = `${baseUrl}/h/${e.token}`;
+            const link = `${baseUrl}/h/${employeePath(e.name, e.token)}`;
             const msg = personalScheduleMessage({ name: e.name, localName, monday, row: e.row, shifts, link });
             const lines = shiftLines(e.row, shifts, monday);
             const isSent = sent.has(e.id);
