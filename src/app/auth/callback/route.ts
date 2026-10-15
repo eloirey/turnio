@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   if (searchParams.get("error")) {
     // Enlace del email ya usado o caducado (otp_expired…) ≠ haber cancelado el login con Google.
     const detail = `${searchParams.get("error_code") ?? ""} ${searchParams.get("error_description") ?? ""}`.toLowerCase();
-    const kind = /otp|expired|invalid/.test(detail) ? "enlace" : "cancelado";
+    const kind = /denied|cancel/.test(detail) && !/otp|expired|invalid/.test(detail) ? "cancelado" : "enlace";
     return NextResponse.redirect(`${origin}/login?error=${kind}`);
   }
 
