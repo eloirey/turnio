@@ -66,7 +66,7 @@ const STEPS: Step[] = [
   {
     href: "/app/cuadrante",
     title: "¡Todo listo!",
-    body: "Puedes volver a abrir esta guía cuando quieras con el botón «Guía» de arriba.",
+    body: "Si te surge una duda en cualquier pantalla, pulsa «Ayuda» arriba. Desde ahí también puedes repetir esta guía.",
     final: true,
   },
 ];
@@ -135,30 +135,10 @@ function useGuideState(): Saved {
   return parse(raw);
 }
 
-// ---------- Botón de la cabecera ----------
-
-export function GuideButton() {
-  const { open, step } = useGuideState();
-  const router = useRouter();
-  const pathname = usePathname();
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (open) return save({ open: false, step });
-        const next = step >= STEPS.length - 1 ? 0 : step;
-        save({ open: true, step: next });
-        if (!pathname.startsWith(STEPS[next].href)) router.push(STEPS[next].href);
-      }}
-      aria-pressed={open}
-      className={`flex min-h-10 items-center gap-1.5 rounded-lg px-3 font-semibold ${open ? "bg-accent-soft text-accent-ink" : "text-accent hover:bg-accent-soft"}`}
-    >
-      <span aria-hidden className="flex h-5 w-5 items-center justify-center rounded-full border-[1.5px] border-current text-[11px] leading-none">
-        ?
-      </span>
-      Guía
-    </button>
-  );
+/** Empieza la guía paso a paso desde el principio (la abre la Ayuda). */
+export function startGuide(navigate: (href: string) => void, pathname: string) {
+  save({ open: true, step: 0 });
+  if (!pathname.startsWith(STEPS[0].href)) navigate(STEPS[0].href);
 }
 
 // ---------- Panel ----------

@@ -235,3 +235,13 @@ describe("enlace personal con nombre", () => {
     expect(tokenFromPath(`${token}x`)).toBeNull();
   });
 });
+
+describe("canales para avisar", async () => {
+  const { shareHref, telegramLink } = await import("./share");
+  it("Telegram adjunta el enlace aparte y codifica el texto", () => {
+    expect(telegramLink("Hola Ana", "https://rotafy.es/h/ana-1")).toBe("https://t.me/share/url?url=https%3A%2F%2Frotafy.es%2Fh%2Fana-1&text=Hola%20Ana");
+    expect(shareHref("telegram", { full: "x", noLink: "Hola", link: "https://r.es/h/a" })).toContain("t.me/share/url?url=https%3A%2F%2Fr.es");
+    expect(shareHref("whatsapp", { full: "Hola", phone: "600123456" })).toBe("https://wa.me/34600123456?text=Hola");
+    expect(shareHref("copy", { full: "Hola" })).toBeNull();
+  });
+});

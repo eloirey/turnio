@@ -65,8 +65,8 @@ export default function PrivacidadPage() {
       <h2>6. Cuánto tiempo los guardamos</h2>
       <p>
         Mientras la cuenta esté activa. El registro de jornada se mantiene aunque la persona deje la empresa, para que esta pueda cumplir su obligación de
-        conservarlo cuatro años; aun así, la responsable de conservarlo es la empresa, y Rotafy le recomienda descargar una copia cada mes. Si el titular borra
-        la cuenta desde Ajustes, se eliminan todos los datos del negocio, incluido el registro de jornada: la empresa debe descargarlo antes.
+        conservarlo cuatro años. Aun así, Rotafy no es un servicio de archivo: la responsable de conservarlo es la empresa, que debe descargar una copia cada
+        mes. Si el titular borra la cuenta desde Ajustes, se eliminan todos los datos del negocio, incluido el registro de jornada.
       </p>
 
       <h2>7. Tus derechos</h2>

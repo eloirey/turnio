@@ -249,11 +249,15 @@ export function FichajesBoard(props: Props) {
             </ul>
           )}
           <p className="mt-4 border-t border-[#EEEBE3] pt-4 text-[13px] leading-relaxed text-ink-muted">Cada corrección queda guardada con su motivo y la hora original.</p>
-          <div className="mt-3 rounded-xl bg-accent-soft p-4 text-[13px] leading-relaxed text-accent-ink">
-            <strong className="mb-1 block text-sm">Guarda una copia cada mes</strong>
+          <div className="mt-3 rounded-xl bg-pending-soft p-4 text-[13px] leading-relaxed text-pending-ink">
+            <strong className="mb-1 block text-sm">Descarga y guarda tu copia cada mes</strong>
             La ley obliga a tu empresa a conservar el registro de jornada <strong>4 años</strong> y a enseñarlo si lo piden la persona, sus representantes o
-            la Inspección de Trabajo. Rotafy lo guarda mientras tengas la cuenta, pero si la borras se borra con ella. A principio de cada mes, pulsa
-            «Exportar a Excel» y guarda el archivo (o mándalo a tu gestoría).
+            la Inspección de Trabajo. <strong>Esa obligación es tuya, no de Rotafy:</strong> Rotafy no es un archivo y no garantiza guardar los fichajes
+            durante ese tiempo (por ejemplo, se borran si borras la cuenta). A principio de cada mes, pulsa «Exportar a Excel» y guarda el archivo o mándalo a
+            tu gestoría.{" "}
+            <a href="/legal/aviso-legal" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">
+              Ver condiciones
+            </a>
           </div>
         </aside>
       </div>

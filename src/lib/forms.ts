@@ -80,10 +80,26 @@ export function firstError(error: z.ZodError): string {
 }
 
 // ---------- Alta del negocio ----------
+const onboardingShift = z
+  .object({
+    code: z.string().max(8).optional(),
+    label: z.string().trim().min(1, "Ponle nombre a cada franja").max(30, "Nombre de franja demasiado largo"),
+    start: timeField,
+    end: timeField,
+  })
+  .refine((s) => spanHours(s.start, s.end) >= 0.5 && spanHours(s.start, s.end) <= 16, { message: "Cada franja debe durar entre media hora y 16 horas." });
+
 export const onboardingSchema = z
   .object({
     nombre: z.string().trim().min(1, "Ponle nombre a tu negocio").max(120, "Nombre demasiado largo"),
     tipo: z.string().max(30).default("otro"),
+    /** Franjas editadas en el alta. Si no vienen, se usan las de la plantilla. */
+    franjas: z
+      .array(onboardingShift)
+      .min(1, "Deja al menos una franja")
+      .max(MAX_SLOTS, `Máximo ${MAX_SLOTS} franjas`)
+      .refine((l) => new Set(l.map((f) => f.label.toLowerCase())).size === l.length, { message: "Hay dos franjas con el mismo nombre." })
+      .optional(),
     puestos: z
       .array(z.string().trim().max(40, "Nombre de puesto demasiado largo"))
       .transform((l) => l.filter(Boolean))

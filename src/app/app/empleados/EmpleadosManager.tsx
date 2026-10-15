@@ -9,6 +9,8 @@ import { DAY_LONG, DAY_SHORT, rangeLabel, shortDateLabel } from "@/lib/dates";
 import { employeePath } from "@/lib/employee-link";
 import { roleMap, roleStyle, type Role } from "@/lib/roles";
 import { activeSlots, type Rules, type ShiftCatalog, type Slot } from "@/lib/schedule/types";
+import { personalLinkMessage, personalLinkMessageNoLink } from "@/lib/messages";
+import { telegramLink } from "@/lib/share";
 import { whatsappLink } from "@/lib/whatsapp";
 import * as serverActions from "./actions";
 
@@ -426,15 +428,20 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                     Copiar
                   </button>
                   <a
-                    href={whatsappLink(
-                      `Hola ${current.name}, aquí verás siempre tu horario de ${localName} y podrás fichar: ${personalLink}\n\nEs tu enlace personal: no lo compartas con nadie, porque con él se ficha a tu nombre.`,
-                      current.phone,
-                    )}
+                    href={whatsappLink(personalLinkMessage(current.name, localName, personalLink), current.phone)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${ui.btnSm} ${ui.primary}`}
                   >
-                    Enviar por WhatsApp
+                    WhatsApp
+                  </a>
+                  <a
+                    href={telegramLink(personalLinkMessageNoLink(current.name, localName), personalLink)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${ui.btnSm} ${ui.secondary}`}
+                  >
+                    Telegram
                   </a>
                 </div>
                 <p className="mt-3 rounded-lg bg-ground px-3 py-2.5 text-[13px] leading-relaxed text-ink-soft">

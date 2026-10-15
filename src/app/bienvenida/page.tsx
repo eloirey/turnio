@@ -11,7 +11,7 @@ export const metadata = { title: "Bienvenida · Rotafy" };
 
 async function Gate() {
   await requireUser();
-  if (await getLocalBundle()) redirect("/app");
+  if (await getLocalBundle()) redirect("/app/cuadrante");
   return <OnboardingForm />;
 }
 

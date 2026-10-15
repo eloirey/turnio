@@ -15,7 +15,7 @@ import {
   type Code,
   type ShiftCatalog,
 } from "./index";
-import { SECTOR_TEMPLATES, templateDemand, templateRoles, templateShifts, templateTeam } from "./templates";
+import { customShifts, getTemplate, SECTOR_TEMPLATES, templateDemand, templateRoles, templateShifts, templateTeam } from "./templates";
 import type { Employee } from "./types";
 
 describe("reglas: noches seguidas", () => {
@@ -260,5 +260,40 @@ describe("reglas de cada persona", () => {
     const roles = templateRoles(t);
     const args = [templateTeam(t, roles), templateDemand(t, roles), templateShifts(t), DEFAULT_RULES] as const;
     expect(generateSchedule(...args)).toEqual(generateSchedule(...args));
+  });
+});
+
+describe("franjas editadas en el alta", () => {
+  it("renombrar, quitar y añadir franjas conserva las necesidades de las que quedan", () => {
+    const t = getTemplate("bar");
+    const roles = templateRoles(t);
+    // Se queda la mañana renombrada, se quita la noche y se añade un partido.
+    const shifts = customShifts(t, [
+      { code: "M", label: "Apertura", start: "08:00", end: "16:00" },
+      { code: "T", label: "Tarde", start: "13:00", end: "21:00" },
+      { label: "Partido", start: "10:00", end: "18:00" },
+      { label: "Cierre", start: "19:00", end: "02:00" },
+    ]);
+    expect(Object.keys(shifts)).toEqual(["M", "T", "F1", "F2"]);
+    expect(shifts.M.label).toBe("Apertura");
+    expect(shifts.M.hours).toBe(8);
+    expect(shifts.F2.closing).toBe(true);
+    expect(shifts.F1.closing).toBe(false);
+    const demand = templateDemand(t, roles, shifts);
+    expect(demand.every((d) => !("N" in d))).toBe(true);
+    expect(demand.some((d) => d.M)).toBe(true);
+    // El equipo de ejemplo puede hacer las franjas nuevas
+    const team = templateTeam(t, roles, shifts);
+    expect(team.every((e) => e.availability.F1.some(Boolean))).toBe(true);
+    expect(team.every((e) => !("N" in e.availability))).toBe(true);
+  });
+
+  it("desde cero: si se quitan todas las franjas de la plantilla, cada puesto pide 1 persona en la primera", () => {
+    const t = getTemplate("otro");
+    const roles = templateRoles(t, ["Conductores", "Taller"]);
+    const shifts = customShifts(t, [{ label: "Línea 12", start: "06:00", end: "14:00" }]);
+    const demand = templateDemand(t, roles, shifts);
+    expect(Object.keys(shifts)).toEqual(["F1"]);
+    expect(demand[0].F1).toEqual({ conductores: 1, taller: 1 });
   });
 });

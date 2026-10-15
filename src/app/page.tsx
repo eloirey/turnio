@@ -30,10 +30,10 @@ const MORE = [
 
 const FAQ = [
   ["¿Mis empleados tienen que instalar algo?", "No. Cada persona recibe un enlace personal que se abre en el navegador del móvil. Ahí ve su horario, ficha y, si quiere, lo añade a su calendario."],
-  ["¿Sirve para mi tipo de negocio?", "Sí, si tu equipo trabaja por turnos. Empiezas con una plantilla de tu sector y luego cambias puestos, franjas (con el nombre y horario que quieras) y cuánta gente necesitas cada día."],
+  ["¿Sirve para mi tipo de negocio?", "Sí, si tu equipo trabaja por turnos. Empiezas con una plantilla de tu sector o, si no está, desde cero: tú pones los puestos, las franjas (con el nombre y horario que uséis) y cuánta gente necesitas cada día."],
   ["¿Cumple la normativa laboral?", "Rotafy aplica los descansos entre jornadas, los días libres, los cierres seguidos y las horas extra que configures, también reglas distintas por persona. La responsabilidad final del cuadrante sigue siendo de la empresa."],
   ["¿Sirve como registro de jornada?", "Sí. Cada persona ficha entrada y salida desde su enlace; la hora la pone el servidor, no el móvil. Las correcciones quedan guardadas con su motivo y la hora original, y exportas cada mes en Excel para la gestoría o la Inspección."],
-  ["¿Cuánto tiempo se guardan los fichajes?", "Mientras tengas la cuenta. Como la ley pide conservarlos cuatro años, te recomendamos descargar el Excel cada mes y guardarlo tú también."],
+  ["¿Rotafy guarda los fichajes por mí?", "Los mantiene mientras tengas la cuenta, pero Rotafy no es un archivo: conservar el registro cuatro años es obligación de tu empresa. Descarga el Excel cada mes (un clic) y guárdalo tú o mándalo a tu gestoría."],
   ["¿Qué pasa si un empleado comparte su enlace?", "El enlace es único para cada persona. Si lo pierde o lo comparte, lo cambias con un toque y el anterior deja de funcionar al momento."],
   ["¿Cuánto cuesta?", "Ahora mismo es gratis mientras dure el piloto, sin tarjeta. Si en el futuro pasa a ser de pago, te avisaremos antes y podrás decidir con calma."],
 ];
@@ -210,7 +210,7 @@ export default function Home() {
                     ["Hora del servidor", "No vale cambiar la hora del móvil."],
                     ["Olvidos resueltos", "Si alguien no ficha la salida, lo corriges y queda guardado el motivo y la hora original."],
                     ["Horas reales de cada uno", "Totales por semana y quién está trabajando ahora."],
-                    ["Excel para la gestoría", "El registro del mes en un clic, listo para la Inspección."],
+                    ["Excel para la gestoría", "El registro del mes en un clic, para guardar tu copia o enseñarlo a la Inspección."],
                   ].map(([t, d]) => (
                     <li key={t} className="flex gap-3.5">
                       <span className="mt-1 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#8FD3B0]/15 text-[#8FD3B0]">
@@ -289,7 +289,7 @@ export default function Home() {
         {/* ---------- Sectores ---------- */}
         <section id="sectores" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-24">
           <SectionTitle kicker="Plantillas" title="Para cualquier equipo con turnos" />
-          <p className="mt-4 max-w-2xl text-lg text-ink-soft">Elige tu sector al crear la cuenta y empiezas con todo preparado.</p>
+          <p className="mt-4 max-w-2xl text-lg text-ink-soft">Elige tu sector al crear la cuenta y empiezas con todo preparado. ¿No está el tuyo? Empiezas desde cero y lo creas a tu manera.</p>
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {SECTORS.map((s, i) => (
               <div key={s.key} className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4">

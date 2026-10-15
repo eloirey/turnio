@@ -529,8 +529,8 @@ export const SECTOR_TEMPLATES: SectorTemplate[] = [
   },
   {
     key: "otro",
-    label: "Otro tipo de negocio",
-    hint: "Empieza con mañana, tarde y noche",
+    label: "Mi sector no está",
+    hint: "Empieza desde cero y créalo a tu manera",
     roles: [{ name: "Equipo", color: 0 }],
     shifts: [
       { code: "M", label: "Mañana", start: "09:00", end: "17:00" },
@@ -563,6 +563,35 @@ export function templateShifts(t: SectorTemplate): ShiftCatalog {
   );
 }
 
+export interface ShiftEdit {
+  /** Código de la franja de la plantilla, o vacío si es nueva. */
+  code?: string;
+  label: string;
+  start: string;
+  end: string;
+}
+
+/**
+ * Franjas tal y como las dejó el encargado en el alta: renombradas, con otro
+ * horario, quitadas o nuevas. Las de la plantilla conservan su código (y con
+ * él sus necesidades); las nuevas reciben F1, F2…
+ */
+export function customShifts(t: SectorTemplate, edits: ShiftEdit[]): ShiftCatalog {
+  const fromTemplate = new Map(t.shifts.map((s) => [s.code, s]));
+  const used = new Set<string>();
+  const catalog: ShiftCatalog = {};
+  edits.forEach((e, i) => {
+    let code = e.code && fromTemplate.has(e.code) && !used.has(e.code) ? e.code : "";
+    for (let n = 1; !code; n++) if (!fromTemplate.has(`F${n}`) && !used.has(`F${n}`)) code = `F${n}`;
+    used.add(code);
+    const base = fromTemplate.get(code);
+    // Una franja nueva es de cierre si acaba de madrugada o a partir de las 23 h.
+    const closing = base ? Boolean(base.closing) : e.end <= e.start || e.end >= "23:00";
+    catalog[code] = { code, label: e.label, start: e.start, end: e.end, hours: spanHours(e.start, e.end), closing, order: i, active: true };
+  });
+  return catalog;
+}
+
 /** Puestos de la plantilla. Si se pasan nombres propios, se usan esos (en el mismo orden). */
 export function templateRoles(t: SectorTemplate, names?: string[]): Role[] {
   const list = names ?? t.roles.map((r) => r.name);
@@ -579,26 +608,32 @@ export function templateRoles(t: SectorTemplate, names?: string[]): Role[] {
  * quitó o añadió puestos, los que no existen en la plantilla reciben
  * 1 persona por la mañana (la primera franja) de lunes a viernes.
  */
-export function templateDemand(t: SectorTemplate, roles: Role[]): Demand {
+export function templateDemand(t: SectorTemplate, roles: Role[], shifts: ShiftCatalog = templateShifts(t)): Demand {
   const demand: Demand = Array.from({ length: DAYS_IN_WEEK }, () => ({}));
+  const codes = Object.values(shifts)
+    .sort((a, b) => a.order - b.order)
+    .map((s) => s.code);
   const add = (day: number, slot: Slot, role: string, count: number) => {
+    if (!codes.includes(slot)) return; // franja quitada en el alta
     const d = (demand[day][slot] ??= {});
     d[role] = (d[role] ?? 0) + count;
   };
   roles.forEach((role, i) => {
-    const specs = t.needs.filter((n) => n.role === i);
-    if (i < t.roles.length && specs.length) {
+    // Si sus franjas de la plantilla se han quitado, pide 1 en la primera que quede.
+    const specs = i < t.roles.length ? t.needs.filter((n) => n.role === i && codes.includes(n.slot)) : [];
+    if (specs.length) {
       for (const n of specs) for (const day of n.days) add(day, n.slot, role.key, n.count);
-    } else {
-      for (const day of MON_FRI) add(day, t.shifts[0].code, role.key, 1);
+    } else if (codes[0]) {
+      for (const day of MON_FRI) add(day, codes[0], role.key, 1);
     }
   });
   return demand;
 }
 
 /** Equipo de ejemplo de la plantilla (para la demo). */
-export function templateTeam(t: SectorTemplate, roles: Role[]): (Employee & { phone: string | null })[] {
-  const codes = t.shifts.map((s) => s.code);
+export function templateTeam(t: SectorTemplate, roles: Role[], shifts: ShiftCatalog = templateShifts(t)): (Employee & { phone: string | null })[] {
+  const codes = Object.keys(shifts);
+  const inTemplate = new Set(t.shifts.map((s) => s.code));
   return t.team
     .filter((p) => roles[p.role])
     .map((p, i) => ({
@@ -608,7 +643,7 @@ export function templateTeam(t: SectorTemplate, roles: Role[]): (Employee & { ph
       contractHours: p.hours,
       phone: p.phone ?? null,
       availability: Object.fromEntries(
-        codes.map((c) => [c, Array.from({ length: DAYS_IN_WEEK }, (_, d) => (!p.slots || p.slots.includes(c)) && !p.off?.includes(d))]),
+        codes.map((c) => [c, Array.from({ length: DAYS_IN_WEEK }, (_, d) => (!p.slots || !inTemplate.has(c) || p.slots.includes(c)) && !p.off?.includes(d))]),
       ),
       preferredDaysOff: [],
     }));
