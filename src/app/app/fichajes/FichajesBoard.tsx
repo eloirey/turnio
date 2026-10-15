@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { useToast } from "@/components/feedback";
 import { NavLink, useIsDemo } from "@/components/nav";
+import { WeekPicker } from "@/components/WeekPicker";
 import { ui } from "@/components/ui";
 import { addDays, DAY_LONG, DAY_SHORT, dayOfMonth, weekRangeLabel } from "@/lib/dates";
 import {
@@ -69,14 +70,28 @@ const SHORT: Partial<Record<DayStatusKind, string>> = {
   unplanned: "Sin turno",
 };
 
+// Tres colores bien distintos: verde (bien), naranja (tarde o antes), rojo (revisar).
+const OK_CHIP = "bg-[#CDEBD9] text-[#0F5132]";
+const LATE_CHIP = "bg-[#FFD9A8] text-[#7A3E00]";
+const BAD_CHIP = "bg-[#F8C9B8] text-[#8A2A0A]";
+
 const CHIP: Partial<Record<DayStatusKind, string>> = {
-  ok: "bg-ok-soft text-accent",
-  late: "bg-pending-soft text-pending-ink",
-  early: "bg-pending-soft text-pending-ink",
+  ok: OK_CHIP,
+  late: LATE_CHIP,
+  early: LATE_CHIP,
   open: "bg-accent text-white",
-  forgot: "bg-danger-soft text-danger-ink",
-  missing: "bg-danger-soft text-danger-ink",
+  forgot: BAD_CHIP,
+  missing: BAD_CHIP,
   unplanned: "bg-[#ECEAE3] text-ink-soft",
+};
+
+/** Fondo de la casilla según cómo fue el día. */
+const CELL: Partial<Record<DayStatusKind, string>> = {
+  ok: "border-[#A9D6BC] bg-[#F2FAF5]",
+  late: "border-[#F3C58C] bg-[#FFF5E8]",
+  early: "border-[#F3C58C] bg-[#FFF5E8]",
+  forgot: "border-[#EBA48B] bg-[#FDEEE8]",
+  missing: "border-[#EBA48B] bg-[#FDEEE8]",
 };
 
 export function FichajesBoard(props: Props) {
@@ -120,7 +135,7 @@ export function FichajesBoard(props: Props) {
                 <span className="sr-only">Semana anterior</span>
               </NavLink>
             )}
-            <h1 className="font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">{weekRangeLabel(monday)}</h1>
+            {nav ? <WeekPicker monday={monday} base={nav.today} /> : <h1 className="font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">{weekRangeLabel(monday)}</h1>}
             {nav && (
               <NavLink href={nav.next} className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] border border-line-strong bg-surface text-lg hover:border-ink">
                 <span aria-hidden>›</span>
@@ -171,9 +186,9 @@ export function FichajesBoard(props: Props) {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-[13px] text-ink-muted">
             <span>Toca un día para ver los tramos o corregirlos.</span>
             <span className="flex flex-wrap gap-3">
-              <Legend cls="bg-ok-soft" label="Correcto" />
-              <Legend cls="bg-pending-soft" label={`Tarde o antes (+${marginMinutes} min)`} />
-              <Legend cls="bg-danger-soft" label="Por revisar" />
+              <Legend cls={OK_CHIP} label="Correcto" />
+              <Legend cls={LATE_CHIP} label={`Tarde o antes (más de ${marginMinutes} min)`} />
+              <Legend cls={BAD_CHIP} label="Por revisar" />
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -249,14 +264,13 @@ export function FichajesBoard(props: Props) {
             </ul>
           )}
           <p className="mt-4 border-t border-[#EEEBE3] pt-4 text-[13px] leading-relaxed text-ink-muted">Cada corrección queda guardada con su motivo y la hora original.</p>
-          <div className="mt-3 rounded-xl bg-pending-soft p-4 text-[13px] leading-relaxed text-pending-ink">
-            <strong className="mb-1 block text-sm">Descarga y guarda tu copia cada mes</strong>
-            La ley obliga a tu empresa a conservar el registro de jornada <strong>4 años</strong> y a enseñarlo si lo piden la persona, sus representantes o
-            la Inspección de Trabajo. <strong>Esa obligación es tuya, no de Rotafy:</strong> Rotafy no es un archivo y no garantiza guardar los fichajes
-            durante ese tiempo (por ejemplo, se borran si borras la cuenta). A principio de cada mes, pulsa «Exportar a Excel» y guarda el archivo o mándalo a
-            tu gestoría.{" "}
+          <div className="mt-3 rounded-xl bg-accent-soft p-4 text-[13px] leading-relaxed text-accent-ink">
+            <strong className="mb-1 block text-sm">Guarda tu copia cada mes</strong>
+            La ley pide conservar el registro de jornada 4 años y enseñarlo si lo piden la persona, sus representantes o la Inspección. Rotafy lo mantiene
+            mientras uses tu cuenta, pero no es un archivo: la copia que cuenta es la tuya. A principio de mes, pulsa «Exportar a Excel» y guárdala (o mándala a
+            tu gestoría).{" "}
             <a href="/legal/aviso-legal" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">
-              Ver condiciones
+              Condiciones
             </a>
           </div>
         </aside>
@@ -291,7 +305,7 @@ export function FichajesBoard(props: Props) {
 function Legend({ cls, label }: { cls: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={`h-3 w-3 rounded-[4px] ${cls}`} />
+      <span className={`h-3.5 w-3.5 rounded-[4px] ${cls}`} />
       {label}
     </span>
   );
@@ -309,7 +323,7 @@ function DayCell({ c, disabled, onOpen }: { c: Cell; disabled: boolean; onOpen: 
       disabled={disabled}
       title={planned ? `Previsto: ${planned}` : "Sin turno previsto"}
       className={`flex h-[68px] w-full flex-col justify-center gap-0.5 rounded-[10px] border px-2.5 text-left transition enabled:hover:-translate-y-px enabled:hover:shadow-md ${
-        c.future || c.kind === "pending" ? "border-dashed border-line-strong text-ink-muted" : needsAttention(c.kind) ? "border-danger/30 bg-danger-soft/40" : "border-line bg-surface"
+        c.future || c.kind === "pending" ? "border-dashed border-line-strong text-ink-muted" : (CELL[c.kind] ?? "border-line bg-surface")
       }`}
     >
       {c.future || c.kind === "pending" ? (

@@ -12,6 +12,7 @@ import { ABSENCE_LABELS } from "@/lib/data/mappers";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getBaseUrl } from "@/lib/url";
 import { ClockCard } from "./ClockCard";
+import { EmployeeAvisos } from "./EmployeeAvisos";
 import { RequestForm } from "./RequestForm";
 
 export const metadata: Metadata = {
@@ -62,7 +63,10 @@ async function EmployeeSchedule({ params }: { params: Params }) {
             {localName} · {roleNames[me.puesto] ?? me.puesto}
           </p>
         </div>
-        <LogoMark size={34} />
+        <div className="flex items-center gap-1">
+          <EmployeeAvisos token={view.token} initial={view.avisos} />
+          <LogoMark size={34} />
+        </div>
       </header>
 
       {clockEnabled && (

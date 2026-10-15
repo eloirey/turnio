@@ -1,5 +1,6 @@
 import "server-only";
 import { addDays, mondayOf, todayInMadrid } from "@/lib/dates";
+import { AVISO_COLUMNS, toAvisos, type AvisoRow } from "@/lib/avisos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { franjasToCatalog, snapshotToGrid, toClockRecords, type AbsenceReason, type FichajeRow, type FranjaRow, type Snapshot } from "./mappers";
 import { tokenFromPath } from "@/lib/employee-link";
@@ -93,7 +94,7 @@ export async function getEmployeeView(token: string) {
   const today = todayInMadrid();
   const thisMonday = mondayOf(today);
 
-  const [data, reqRes, clockRes] = await Promise.all([
+  const [data, reqRes, clockRes, avisosRes] = await Promise.all([
     loadPublished(me, thisMonday, addDays(thisMonday, 7)),
     db
       .from("solicitudes")
@@ -108,7 +109,9 @@ export async function getEmployeeView(token: string) {
       .eq("empleado_id", me.id)
       .or(`entrada.gte.${madridToIso(thisMonday, "00:00")},and(salida.is.null,sin_salida.is.false)`)
       .order("entrada"),
+    db.from("avisos").select(AVISO_COLUMNS).eq("empleado_id", me.id).order("creado_en", { ascending: false }).limit(20),
   ]);
+  const avisos = toAvisos((avisosRes.data ?? []) as AvisoRow[]);
 
   return {
     me,
@@ -116,6 +119,7 @@ export async function getEmployeeView(token: string) {
     today,
     ...data,
     clock: toClockRecords((clockRes.data ?? []) as FichajeRow[]),
+    avisos: { items: avisos, unread: avisos.filter((a) => !a.leido).length },
     requests: (reqRes.data ?? []) as {
       id: string;
       tipo: "librar" | "intercambio";

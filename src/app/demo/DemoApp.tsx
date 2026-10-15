@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { AvisosBell } from "@/components/avisos/AvisosBell";
+import type { Aviso } from "@/lib/avisos";
 import { GuidePanel, GuideWaiting, guideBtn, highlightTour } from "@/components/guide/GuidePanel";
 import { Cuadrante, type Persistence } from "@/components/cuadrante/Cuadrante";
 import { Logo } from "@/components/Logo";
@@ -15,7 +17,7 @@ import { FichajesBoard, type ClockActions } from "@/app/app/fichajes/FichajesBoa
 import { NecesidadesEditor } from "@/app/app/necesidades/NecesidadesEditor";
 import { OnboardingForm } from "@/app/bienvenida/OnboardingForm";
 import { absencesForWeek } from "@/lib/data/mappers";
-import { addDays, isValidISODate } from "@/lib/dates";
+import { addDays, dayOfMonth, isValidISODate } from "@/lib/dates";
 import { clockCsv, dayStatus, groupByEmployeeDay, madridToIso, type ClockRecord } from "@/lib/fichajes";
 import { employeeSchema, firstError, necesidadesSchema, settingsSchema } from "@/lib/forms";
 import { makeRoleKey } from "@/lib/roles";
@@ -45,6 +47,7 @@ export function DemoApp() {
   const [tab, setTab] = useState<DemoTab>("empleados");
   const [step, setStep] = useState(0);
   const [guideHidden, setGuideHidden] = useState(false);
+  const [avisosRead, setAvisosRead] = useState(false);
   // Copia síncrona del estado para que las acciones (asíncronas) lean siempre lo último.
   const stateRef = useRef<DemoState | null>(null);
   useEffect(() => {
@@ -317,6 +320,13 @@ export function DemoApp() {
   }
 
   const ids = state.employees.map((e) => e.id);
+  // Avisos de ejemplo para la campanita (en la app de verdad llegan solos).
+  const someone = state.employees[2]?.name ?? state.employees[0]?.name ?? "Laura";
+  const demoAvisosItems: Aviso[] = [
+    { id: "d1", tipo: "solicitud", titulo: `${someone} pide librar el viernes ${dayOfMonth(state.monday, 4)}`, cuerpo: "Tengo médico por la mañana.", enlace: "/app/cuadrante", creadoEn: new Date(Date.parse(state.now) - 25 * 60_000).toISOString(), leido: avisosRead },
+    { id: "d2", tipo: "anuncio", titulo: "Bienvenido a Rotafy", cuerpo: "Aquí te avisamos de las solicitudes de tu equipo, de quien olvide fichar la salida y de las novedades.", enlace: null, creadoEn: new Date(Date.parse(state.now) - 3 * 3_600_000).toISOString(), leido: avisosRead },
+  ];
+  const demoAvisos = { items: demoAvisosItems, unread: avisosRead ? 0 : demoAvisosItems.length };
   const grid = normalizeGrid(state.grid, state.employees);
   const usage = Object.fromEntries(state.roles.map((r) => [r.key, state.employees.filter((e) => e.role === r.key).length]));
 
@@ -329,6 +339,14 @@ export function DemoApp() {
           activeHref={`/app/${tab}`}
           extra={
             <>
+              <AvisosBell
+                key={state.name}
+                initial={demoAvisos}
+                pollMs={0}
+                load={async () => ({ ok: true as const, ...demoAvisos })}
+                markRead={async () => setAvisosRead(true)}
+                emptyText="No tienes avisos."
+              />
               {guideHidden && (
                 <button onClick={() => setGuideHidden(false)} className="min-h-10 rounded-lg px-3 font-semibold text-accent hover:bg-accent-soft">
                   Guía
@@ -516,7 +534,7 @@ function guideSteps(state: DemoState | null): GuideStep[] {
     {
       tab: "cuadrante",
       title: "Así avisas a tu equipo",
-      body: "Cada persona recibe por WhatsApp su horario y su enlace personal, donde lo consulta, ficha y lo añade a su calendario. Sin instalar nada. El enlace es único de cada uno y no se comparte: si se pierde, lo cambias desde Equipo.",
+      body: "Cada persona recibe por WhatsApp o Telegram su horario y su enlace personal, donde lo consulta, ficha y lo añade a su calendario. Sin instalar nada. El enlace es único de cada uno y no se comparte: si se pierde, lo cambias desde Equipo.",
       cta: "Siguiente: fichajes",
     },
     {

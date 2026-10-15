@@ -23,7 +23,7 @@ const STEPS: Step[] = [
   {
     href: "/app/empleados",
     title: "Añade a tu equipo",
-    body: "Pulsa «+ Añadir persona»: nombre, puesto, horas de contrato y qué franjas puede trabajar cada día. En «Preferencias y reglas propias» le das días libres preferidos o reglas solo para esa persona.",
+    body: "Rellena el formulario: nombre, puesto, horas de contrato y qué franjas puede trabajar cada día, y pulsa «Añadir al equipo» (abajo). Para añadir a otra persona, «+ Añadir persona». En «Preferencias y reglas propias» le das días libres preferidos o reglas solo para ella.",
     cta: "Siguiente: necesidades",
   },
   {

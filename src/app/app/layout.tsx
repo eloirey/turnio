@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { AppAvisos } from "@/components/avisos/AppAvisos";
 import { AppGuide } from "@/components/guide/AppGuide";
 import { HelpButton } from "@/components/guide/HelpButton";
 import { SetupNotice } from "@/components/SetupNotice";
@@ -20,7 +21,12 @@ async function Shell({ children }: { children: React.ReactNode }) {
   const { local } = await requireLocal();
   return (
     <>
-      <AppHeader localName={local.nombre} nav={NAV} signOut={signOut} extra={<HelpButton />} />
+      <AppHeader localName={local.nombre} nav={NAV} signOut={signOut} extra={
+          <>
+            <AppAvisos />
+            <HelpButton />
+          </>
+        } />
       {children}
       <AppGuide />
     </>

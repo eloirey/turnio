@@ -127,7 +127,8 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
       if (!res.ok) return setError(res.error);
       const isNew = !draft.id;
       setDraft((d) => ({ ...d, id: res.id }));
-      toast.show(isNew ? `${draft.nombre} se ha unido al equipo.` : "Cambios guardados.");
+      if (isNew) toast.show({ message: `${draft.nombre} se ha unido al equipo.`, action: { label: "Añadir otra persona", onClick: () => select(null) } });
+      else toast.show("Cambios guardados.");
     });
   }
 
@@ -182,9 +183,12 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
             {employees.length === 0 ? "Añade a las personas que trabajan contigo." : `${employees.length} ${employees.length === 1 ? "persona" : "personas"}. Con estos datos se genera el cuadrante.`}
           </p>
         </div>
-        <button onClick={() => select(null)} className={`${ui.btn} ${ui.primary}`}>
-          + Añadir persona
-        </button>
+        {/* Mientras se añade a alguien, este botón desaparece: el que cuenta es «Añadir al equipo». */}
+        {draft.id && (
+          <button onClick={() => select(null)} className={`${ui.btn} ${ui.primary}`}>
+            + Añadir persona
+          </button>
+        )}
       </div>
 
       {firstTime && (
@@ -234,7 +238,21 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
         {/* ---------- Ficha ---------- */}
         <section aria-label="Ficha" className="flex min-w-0 flex-[999_1_620px] flex-col gap-5">
           <div className={`${ui.card} p-6`}>
-            <h2 className={`${ui.h2} mb-4`}>{draft.id ? draft.nombre || "Sin nombre" : "Nueva persona"}</h2>
+            {draft.id ? (
+              <h2 className={`${ui.h2} mb-4`}>{draft.nombre || "Sin nombre"}</h2>
+            ) : (
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className={ui.h2}>Nueva persona</h2>
+                  <p className="mt-0.5 text-sm text-ink-muted">Rellena sus datos y pulsa «Añadir al equipo» al final.</p>
+                </div>
+                {employees.length > 0 && (
+                  <button onClick={() => select(employees[0])} className="min-h-10 flex-none rounded-lg px-3 text-sm font-semibold text-ink-muted hover:bg-ground hover:text-ink">
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className={ui.label}>
                 Nombre
@@ -394,18 +412,24 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
               {error}
             </p>
           )}
-          <div className="flex flex-wrap justify-between gap-2.5">
-            {draft.id ? (
+          {draft.id ? (
+            <div className="flex flex-wrap justify-between gap-2.5">
               <button onClick={remove} disabled={pending} className={`${ui.btn} ${ui.danger}`}>
                 Eliminar
               </button>
-            ) : (
-              <span />
-            )}
-            <button onClick={save} disabled={pending} className={`${ui.btn} ${ui.primary}`}>
-              {pending ? "Guardando…" : draft.id ? "Guardar cambios" : "Añadir al equipo"}
-            </button>
-          </div>
+              <button onClick={save} disabled={pending} className={`${ui.btn} ${ui.primary}`}>
+                {pending ? "Guardando…" : "Guardar cambios"}
+              </button>
+            </div>
+          ) : (
+            // Al añadir, el botón se queda pegado abajo para que siempre esté a mano.
+            <div className="sticky bottom-3 z-20 flex items-center gap-3 rounded-2xl border border-line bg-surface/95 p-2 pr-4 shadow-[0_12px_30px_-12px_rgba(27,27,26,0.35)] backdrop-blur">
+              <button onClick={save} disabled={pending} className={`${ui.btn} ${ui.primary} flex-none`}>
+                {pending ? "Añadiendo…" : "Añadir al equipo"}
+              </button>
+              <span className="min-w-0 truncate text-sm text-ink-soft">{draft.nombre.trim() ? `Nueva persona: ${draft.nombre.trim()}` : "Nueva persona"}</span>
+            </div>
+          )}
 
           {current && (
             <>
@@ -431,7 +455,7 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                     href={whatsappLink(personalLinkMessage(current.name, localName, personalLink), current.phone)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${ui.btnSm} ${ui.primary}`}
+                    className={`${ui.btnSm} ${ui.whatsapp}`}
                   >
                     WhatsApp
                   </a>
@@ -439,7 +463,7 @@ export function EmpleadosManager({ employees, roles, shifts, rules, absences, to
                     href={telegramLink(personalLinkMessageNoLink(current.name, localName), personalLink)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${ui.btnSm} ${ui.secondary}`}
+                    className={`${ui.btnSm} ${ui.telegram}`}
                   >
                     Telegram
                   </a>
