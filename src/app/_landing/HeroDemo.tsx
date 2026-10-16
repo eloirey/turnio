@@ -13,9 +13,9 @@ import { PALETTE } from "@/lib/roles";
  * 790×540 px que luego se escala al ancho disponible.
  */
 
-const TOTAL = 42_000;
+export const TOTAL = 42_000;
 const START = 600;
-const CHAPTERS = [
+export const CHAPTERS = [
   { start: 0, title: "Genera la semana", text: "Lunes, 10:00. Un clic y Rotafy reparte los turnos respetando descansos y contratos." },
   { start: 7_000, title: "Publica y avisa", text: "Cada persona recibe su horario en el móvil. Sin fotos en el grupo." },
   { start: 13_000, title: "Fichan desde el móvil", text: "Miércoles, 16:58. Laura ficha al llegar y tú lo ves al momento." },
@@ -24,8 +24,8 @@ const CHAPTERS = [
   { start: 35_000, title: "El registro, en Excel", text: "A fin de mes, un clic y se lo mandas a la gestoría." },
 ] as const;
 
-const W = 790;
-const H = 540;
+export const W = 790;
+export const H = 540;
 /** El ordenador del encargado y el móvil de Laura, en el escenario. */
 const WIN = { x: 0, y: 28 };
 const PHONE = { x: 578, y: 116, w: 200, h: 404 };
@@ -108,17 +108,17 @@ const CURSOR: [number, number, number][] = [
   [38_400, 300, 400],
   [TOTAL, 430, 330],
 ];
-const CLICKS = [1_100, 4_400, 5_100, 8_000, 24_700, 28_800, 30_000, 32_400, 35_800, 37_000];
-const TAPS: [number, { x: number; y: number }][] = [
+export const CLICKS = [1_100, 4_400, 5_100, 8_000, 24_700, 28_800, 30_000, 32_400, 35_800, 37_000];
+export const TAPS: [number, { x: number; y: number }][] = [
   [10_000, TAP_NOTIF],
   [14_500, TAP_CLOCK],
   [20_700, TAP_REQUEST],
   [22_700, TAP_SEND],
 ];
 
-const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-const ease = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
-const prog = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
+export const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+export const ease = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
+export const prog = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
 
 function cursorAt(t: number) {
   let i = CURSOR.findIndex(([ms]) => ms > t);
@@ -154,6 +154,14 @@ function scheduleAt(t: number): Code[][] {
       return c;
     }),
   );
+}
+
+/** Cuándo se acaba de rellenar una casilla (para que entre con un pequeño «pop»). */
+function fillAt(r: number, d: number, t: number): number | null {
+  if (r === 4 && d === 5) return t < 7_000 ? 5_100 : null;
+  if (r === 4 && d === 4 && t >= 25_700) return 25_700;
+  if (t < 7_000) return 1_300 + (r * 7 + d) * 30;
+  return null;
 }
 
 // ---------- Componente ----------
@@ -311,11 +319,11 @@ export function HeroDemo() {
  * en cada fotograma tocando el DOM directamente; el resto se repinta con React
  * unas 20 veces por segundo. Así la animación es fluida y gasta poco.
  */
-function Overlay({ overlayRef }: { overlayRef: React.RefObject<HTMLDivElement | null> }) {
+export function Overlay({ overlayRef }: { overlayRef: React.RefObject<HTMLDivElement | null> }) {
   return (
     <div ref={overlayRef} className="pointer-events-none absolute inset-0 z-30">
       <span data-k="tap" className="absolute rounded-full border-2 border-white bg-ink/25" style={{ width: 36, height: 36, opacity: 0 }} />
-      <div data-k="cursor" className="absolute" style={{ transition: "scale 120ms" }}>
+      <div data-k="cursor" className="absolute">
         <span data-k="ripple" className="absolute rounded-full bg-accent/30" style={{ left: -13, top: -14, width: 32, height: 32, opacity: 0 }} />
         <svg width="22" height="26" viewBox="0 0 22 26" className="drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]">
           <path d="M2 2l16 11.5-7 1.3 4.2 8.2-3.3 1.6-4.2-8.3L2 21z" fill="#1B1B1A" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
@@ -326,7 +334,7 @@ function Overlay({ overlayRef }: { overlayRef: React.RefObject<HTMLDivElement | 
   );
 }
 
-function paintOverlay(root: HTMLDivElement | null, t: number) {
+export function paintOverlay(root: HTMLDivElement | null, t: number) {
   if (!root) return;
   const q = (k: string) => root.querySelector<HTMLElement>(`[data-k="${k}"]`)!;
   const cur = cursorAt(t);
@@ -350,7 +358,7 @@ function paintOverlay(root: HTMLDivElement | null, t: number) {
   q("fade").style.opacity = String(prog(t, TOTAL - 700, TOTAL) + (1 - prog(t, 0, 500)));
 }
 
-const Content = memo(function Content({ t }: { t: number }) {
+export const Content = memo(function Content({ t }: { t: number }) {
   return (
     <div className="relative h-full w-full font-sans text-ink">
       <ManagerWindow t={t} />
@@ -364,6 +372,7 @@ const Content = memo(function Content({ t }: { t: number }) {
 
 function ManagerWindow({ t }: { t: number }) {
   const clockMode = t >= 28_900; // pestaña Fichajes
+  const clockFade = ease(prog(t, 28_900, 29_200));
   const unread = t >= 23_400 && t < 24_800 ? 1 : 0;
   return (
     <div className="absolute overflow-hidden rounded-[22px] border border-line bg-surface shadow-[0_40px_80px_-40px_rgba(27,27,26,0.5)]" style={{ left: WIN.x, top: WIN.y, width: 590, height: 452 }}>
@@ -390,10 +399,10 @@ function ManagerWindow({ t }: { t: number }) {
       </div>
 
       <div className="relative" style={{ height: 452 - 64 }}>
-        <div className="absolute inset-0 transition-opacity duration-300" style={{ opacity: clockMode ? 0 : 1 }}>
+        <div className="absolute inset-0" style={{ opacity: 1 - clockFade }}>
           <ScheduleView t={t} />
         </div>
-        <div className="absolute inset-0 transition-opacity duration-300" style={{ opacity: clockMode ? 1 : 0 }}>
+        <div className="absolute inset-0" style={{ opacity: clockFade }}>
           {t >= 28_000 && <ClockView t={t} />}
         </div>
       </div>
@@ -470,16 +479,19 @@ function ScheduleView({ t }: { t: number }) {
           {grid[r].map((c, d) => {
             const chip = chips[`${r}-${d}`];
             const missing = missingSat && r === 4 && d === 5 && t >= 2_600;
+            const at = fillAt(r, d, t);
+            const pop = at === null ? 1 : ease(prog(t, at, at + 260));
             return (
               <span
                 key={d}
-                className={`absolute flex flex-col justify-center rounded-lg px-1.5 transition-all duration-300 ${c ? "" : missing ? "border-2 border-dashed border-danger/60 bg-danger-soft" : "border border-dashed border-[#D6D2C7]"} ${pulse(r, d) ? "ring-2 ring-accent ring-offset-1" : ""}`}
+                className={`absolute flex flex-col justify-center rounded-lg px-1.5 ${c ? "" : missing ? "border-2 border-dashed border-danger/60 bg-danger-soft" : "border border-dashed border-[#D6D2C7]"} ${pulse(r, d) ? "ring-2 ring-accent ring-offset-1" : ""}`}
                 style={{
                   left: cellX(d),
                   top: cellY(r) - 64,
                   width: GRID.colW,
                   height: GRID.rowH - 4,
                   ...(c ? { backgroundColor: PALETTE[p.color].bg, color: PALETTE[p.color].fg } : {}),
+                  ...(c && pop < 1 ? { opacity: 0.35 + 0.65 * pop, transform: `scale(${0.9 + 0.1 * pop})` } : {}),
                 }}
               >
                 {c ? (
@@ -732,6 +744,8 @@ function RequestNote({ t }: { t: number }) {
 function Phone({ t }: { t: number }) {
   const time = t < 13_000 ? "10:05" : t < 20_000 ? (t < 15_000 ? "16:58" : "16:59") : t < 28_000 ? "18:20" : "10:30";
   const view = t < 10_100 ? "lock" : t < 13_000 ? "week" : t < 28_000 ? "today" : "record";
+  // Fundido entre pantallas: cada una se ve entre su inicio y el de la siguiente.
+  const on = (a: number, b: number) => (a <= 0 ? 1 : ease(prog(t, a, a + 300))) * (1 - ease(prog(t, b, b + 300)));
   return (
     <div className="absolute z-10 rounded-[30px] border-[7px] border-ink bg-ink shadow-[0_30px_60px_-20px_rgba(27,27,26,0.6)]" style={{ left: PHONE.x, top: PHONE.y, width: PHONE.w, height: PHONE.h }}>
       <div className="relative h-full overflow-hidden rounded-[23px] bg-ground">
@@ -742,43 +756,46 @@ function Phone({ t }: { t: number }) {
           <span className="text-[8px]">●●● 4G</span>
         </div>
 
-        <Fade on={view === "lock"}>
+        <Fade o={on(0, 10_100)}>
           <div className="absolute inset-0 bg-[linear-gradient(160deg,#2C6E55,#123B2C)] px-3 pt-12 text-center text-white">
             <div className="text-[11px] opacity-80">lunes 12 de octubre</div>
             <div className="font-display text-[44px] font-semibold leading-none tracking-tight">10:05</div>
           </div>
         </Fade>
-        <Fade on={view === "week"}>
+        <Fade o={on(10_100, 13_000)}>
           <WeekView t={t} />
         </Fade>
-        <Fade on={view === "today"}>
+        <Fade o={on(13_000, 28_000)}>
           <TodayView t={t} />
         </Fade>
-        <Fade on={view === "record"}>
+        <Fade o={on(28_000, Infinity)}>
           <RecordView />
         </Fade>
 
         {/* Notificaciones en el móvil */}
-        <PhoneNotice show={t >= 8_800 && t < 10_100} top={106} title="Rotafy · Bar Central" text="Ya está tu horario del 12 al 18 de octubre" dark />
-        <PhoneNotice show={t >= 25_900 && t < 27_900} title="Rotafy · ahora" text="Aceptado: librar el viernes 16" />
+        <PhoneNotice t={t} from={8_800} to={10_100} top={106} title="Rotafy · Bar Central" text="Ya está tu horario del 12 al 18 de octubre" dark />
+        <PhoneNotice t={t} from={25_900} to={27_900} title="Rotafy · ahora" text="Aceptado: librar el viernes 16" />
       </div>
     </div>
   );
 }
 
-function Fade({ on, children }: { on: boolean; children: React.ReactNode }) {
+function Fade({ o, children }: { o: number; children: React.ReactNode }) {
   return (
-    <div className="absolute inset-0 pt-6 transition-opacity duration-300" style={{ opacity: on ? 1 : 0 }}>
+    <div className="absolute inset-0 pt-6" style={{ opacity: o, visibility: o > 0 ? "visible" : "hidden" }}>
       {children}
     </div>
   );
 }
 
-function PhoneNotice({ show, title, text, dark = false, top = 30 }: { show: boolean; title: string; text: string; dark?: boolean; top?: number }) {
+function PhoneNotice({ t, from, to, title, text, dark = false, top = 30 }: { t: number; from: number; to: number; title: string; text: string; dark?: boolean; top?: number }) {
+  // Baja desde arriba al llegar y vuelve a subir al irse.
+  const p = ease(prog(t, from, from + 450)) * (1 - ease(prog(t, to, to + 400)));
+  if (p <= 0) return null;
   return (
     <div
-      className={`absolute left-2 right-2 z-30 rounded-2xl p-2.5 shadow-lg transition-all duration-500 ${dark ? "bg-white/90" : "bg-surface"} border border-line`}
-      style={{ top: show ? top : top - 110, opacity: show ? 1 : 0 }}
+      className={`absolute left-2 right-2 z-30 rounded-2xl border border-line p-2.5 shadow-lg ${dark ? "bg-white/90" : "bg-surface"}`}
+      style={{ top, opacity: p, transform: `translateY(${(p - 1) * 110}px)` }}
     >
       <div className="flex items-center gap-1.5 text-[9px] font-semibold text-ink-muted">
         <Mark size={13} /> {title}
@@ -806,8 +823,8 @@ function WeekView({ t }: { t: number }) {
         {days.map(([d, n, s], i) => (
           <div
             key={d}
-            className={`flex items-center gap-2 rounded-xl px-2 py-1.5 transition-all duration-300 ${s ? "border border-line bg-surface" : "border border-dashed border-[#D6D2C7]"}`}
-            style={{ opacity: t >= 10_200 + i * 90 ? 1 : 0, transform: `translateY(${t >= 10_200 + i * 90 ? 0 : 6}px)` }}
+            className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${s ? "border border-line bg-surface" : "border border-dashed border-[#D6D2C7]"}`}
+            style={appear(t, 10_200 + i * 90, 6)}
           >
             <span className="w-7 text-center leading-none">
               <span className="block text-[8px] text-ink-muted">{d}</span>
@@ -938,7 +955,7 @@ function Field({ label, value, active = false }: { label: string; value: string;
   );
 }
 
-function Mark({ size }: { size: number }) {
+export function Mark({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
       <rect width="32" height="32" rx="9" fill="#1F5C46" />
